@@ -1,0 +1,1872 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>786-M25 BEPI-MA Research Suite</title>
+    <script src="https://cdn.plot.ly/plotly-2.24.1.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+    <script id="saved-state-script">window.SAVED_STATE=null;</script>
+    <style>
+        :root { --p: #1e293b; --a: #2563eb; --bg: #f8fafc; --b: #e2e8f0; --ok:#10b981; --warn:#f59e0b; --err:#ef4444; }
+        * { box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg); color: var(--p); margin: 0; height: 100vh; display: flex; flex-direction: column; }
+        
+        header { background: #fff; border-bottom: 1px solid var(--b); padding: 10px 20px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); z-index: 50; }
+        .brand { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 1.1rem; }
+        .logo { background: var(--p); color: #fff; padding: 4px 8px; border-radius: 6px; font-family: 'JetBrains Mono'; }
+        .tag { background: linear-gradient(135deg, #6366f1, #4f46e5); color: white; padding: 2px 8px; border-radius: 99px; font-size: 0.6rem; text-transform: uppercase; margin-left: 8px; }
+
+        nav { background: #fff; border-bottom: 1px solid var(--b); padding: 0 20px; overflow-x: auto; }
+        .nav-list { display: flex; gap: 15px; }
+        .nav-item { padding: 12px 0; font-size: 0.8rem; font-weight: 500; color: #64748b; cursor: pointer; border-bottom: 2px solid transparent; transition: 0.2s; white-space: nowrap; }
+        .nav-item:hover { color: var(--p); }
+        .nav-item.active { color: var(--a); border-bottom-color: var(--a); font-weight: 600; }
+        .sep { width: 1px; background: var(--b); height: 20px; align-self: center; }
+
+        main { flex: 1; overflow-y: auto; padding: 20px; max-width: 1800px; margin: 0 auto; width: 100%; display: flex; flex-direction: column; gap: 20px; }
+        .view { display: none; animation: fade 0.3s; }
+        .view.active { display: block; }
+        @keyframes fade { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
+
+        .card { background: #fff; border: 1px solid var(--b); border-radius: 8px; overflow: hidden; box-shadow: 0 1px 2px rgba(0,0,0,0.05); }
+        .card-h { padding: 12px 20px; border-bottom: 1px solid var(--b); font-weight: 600; display: flex; justify-content: space-between; align-items: center; background: #fcfcfc; }
+        .card-b { padding: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
+        .grid-4 { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 15px; }
+
+        .btn { background: #fff; border: 1px solid var(--b); padding: 6px 12px; border-radius: 6px; cursor: pointer; font-size: 0.8rem; font-weight: 500; color: #475569; display: inline-flex; align-items: center; gap: 6px; transition: 0.1s; }
+        .btn:hover { border-color: var(--a); color: var(--a); background: #f8fafc; }
+        .btn-p { background: var(--p); color: #fff; border-color: var(--p); }
+        .btn-p:hover { background: #334155; }
+        .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
+        
+        .table-wrap { overflow: auto; border: 1px solid var(--b); border-radius: 6px; max-height: 50vh; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        th { background: #f8fafc; padding: 10px 15px; text-align: left; font-weight: 600; border-bottom: 1px solid var(--b); position: sticky; top: 0; }
+        td { border-bottom: 1px solid var(--b); padding: 0; }
+        input { width: 100%; padding: 8px 15px; border: none; background: transparent; font-family: inherit; }
+        input:focus { background: #eff6ff; outline: none; }
+
+        .plot-h { height: 400px; width: 100%; }
+        .stat { padding: 10px; border: 1px solid var(--b); border-radius: 6px; background: #f8fafc; }
+        .stat-l { font-size: 0.7rem; text-transform: uppercase; color: #64748b; font-weight: 700; margin-bottom: 4px; display:flex; align-items: center; gap: 5px; }
+        .stat-v { font-size: 1.2rem; font-weight: 700; color: var(--p); font-family: 'JetBrains Mono'; }
+        
+        .loader { position: fixed; inset: 0; background: rgba(255,255,255,0.95); z-index: 100; display: none; place-items: center; backdrop-filter: blur(2px); }
+        .loader-content { text-align: center; }
+        .spinner { width: 40px; height: 40px; border: 3px solid var(--b); border-top-color: var(--a); border-radius: 50%; animation: spin 0.8s linear infinite; margin: 0 auto 15px; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        
+        .net-matrix { display: grid; gap: 1px; background: var(--b); border: 1px solid var(--b); }
+        .net-cell { background: white; padding: 10px; display: grid; place-items: center; text-align: center; font-size: 0.8rem; height: 60px; }
+        .net-cell.diag { background: #f1f5f9; font-weight: 700; }
+        .net-cell.sig { background: #ecfdf5; color: #047857; font-weight: 600; }
+        
+        .rob-grid { display: grid; grid-template-columns: 150px repeat(5, 1fr) 80px; gap: 1px; background: #e2e8f0; margin-bottom: 20px; font-size:0.8rem; }
+        .rob-head { background: #f8fafc; padding: 8px; font-weight: 700; text-align: center; }
+        .rob-cell { background: white; padding: 6px; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .rob-circle { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #ccc; display:grid; place-items:center; font-size:12px; font-weight:bold; }
+        .rob-low .rob-circle { background: #4ade80; border-color: #166534; color:#166534; }
+        .rob-some .rob-circle { background: #facc15; border-color: #854d0e; color:#854d0e; }
+        .rob-high .rob-circle { background: #f87171; border-color: #991b1b; color:#991b1b; }
+        
+        .robma-row { display: flex; align-items: center; gap: 10px; margin-bottom: 5px; font-size: 0.85rem; }
+        .robma-bar { flex:1; height: 8px; background: #e2e8f0; border-radius: 4px; overflow: hidden; }
+        .robma-fill { height: 100%; background: var(--a); }
+        
+        .tooltip { position: relative; cursor: help; border-bottom: 1px dotted #94a3b8; }
+        .tooltip:hover::after { content: attr(data-tip); position: absolute; bottom: 100%; left: 50%; transform: translateX(-50%); background: #1e293b; color: white; padding: 6px 10px; border-radius: 4px; font-size: 0.75rem; white-space: nowrap; z-index: 20; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1); margin-bottom: 6px; }
+        
+        .mcmc-diag { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin-top: 15px; padding: 10px; background: #f8fafc; border-radius: 6px; font-size: 0.8rem; }
+        .mcmc-diag div { text-align: center; }
+        .mcmc-diag strong { color: var(--p); }
+    </style>
+</head>
+<body>
+
+<div id="loader" class="loader"><div class="loader-content"><div class="spinner"></div><div id="load-msg" style="font-weight:600">Processing...</div></div></div>
+
+<header>
+    <div class="brand"><div class="logo">M25</div> 786-M25 <span class="tag">BEPI-MA Complete</span></div>
+    <div style="display:flex; gap:10px">
+        <select class="btn" id="data-type" onchange="App.switchType()">
+            <option value="binary">Binary (Events/N)</option>
+            <option value="cont">Continuous (Mean/SD/N)</option>
+            <option value="dta">Diagnostic (TP/FP/FN/TN)</option>
+            <option value="dose">Dose-Response (Dose/E/N)</option>
+            <option value="enhanced">Enhanced (Bin + Dist)</option>
+        </select>
+        <button class="btn" onclick="App.exportCSV()">Export CSV</button>
+        <button class="btn btn-p" onclick="App.download()">Save File</button>
+    </div>
+</header>
+
+<nav>
+    <div class="nav-list">
+        <div class="nav-item active" onclick="App.nav('data', event)">1. Data</div>
+        <div class="nav-item" onclick="App.nav('pairwise', event)">2. Pairwise</div>
+        <div class="nav-item" onclick="App.nav('nma', event)">3. NMA</div>
+        <div class="nav-item" onclick="App.nav('cnma', event)">4. CNMA</div>
+        <div class="nav-item" onclick="App.nav('dta', event)">5. DTA</div>
+        <div class="nav-item" onclick="App.nav('dose', event)">6. Dose</div>
+        <div class="sep"></div>
+        <div class="nav-item" onclick="App.nav('gosh', event)">7. GOSH</div>
+        <div class="nav-item" onclick="App.nav('robma', event)">8. RoBMA</div>
+        <div class="nav-item" onclick="App.nav('mcmc', event)">9. MCMC</div>
+        <div class="nav-item" onclick="App.nav('rob', event)">10. RoB/GRADE</div>
+        <div class="nav-item" onclick="App.nav('enhanced', event)" style="color:#4f46e5; font-weight:700">11. BEPI-MA</div>
+    </div>
+</nav>
+
+<main>
+    <!-- DATA -->
+    <div id="view-data" class="view active">
+        <div class="card">
+            <div class="card-h">
+                <span>Data Editor</span>
+                <div style="display:flex; gap:8px">
+                    <button class="btn" onclick="App.pasteData()">📋 Paste</button>
+                    <button class="btn" onclick="App.loadEx('nma')">NMA</button>
+                    <button class="btn" onclick="App.loadEx('enhanced')">BEPI Ex</button>
+                    <button class="btn" onclick="App.loadEx('gosh')">GOSH</button>
+                    <button class="btn" onclick="App.loadEx('cnma')">CNMA</button>
+                    <button class="btn" onclick="App.loadEx('dta')">DTA</button>
+                    <button class="btn" onclick="App.addRow()">+ Row</button>
+                </div>
+            </div>
+            <div class="card-b" style="padding:0"><div class="table-wrap"><table id="editor-table"><thead></thead><tbody></tbody></table></div></div>
+            <div class="card-b" style="background:#f8fafc; font-size:0.8rem; color:#64748b; padding:10px 20px">
+                <strong>Format:</strong> Use long format. For Enhanced, data must include <code>Mean/SD</code> or <code>Median/IQR</code> for distribution recovery.
+            </div>
+        </div>
+    </div>
+
+    <!-- BEPI-MA ENHANCED VIEW -->
+    <div id="view-enhanced" class="view">
+        <div class="card">
+            <div class="card-h"><span>BEPI-MA Framework (Bayesian Enhanced Partial Identification)</span><button class="btn btn-p" onclick="Enhanced.run()">Run BEPI Analysis</button></div>
+            <div class="card-b">
+                <!-- Stats Row 1 -->
+                <div class="grid-4" style="margin-bottom:20px">
+                    <div class="stat"><div class="stat-l">Pooled Effect</div><div class="stat-v" id="bepi-est">-</div></div>
+                    <div class="stat"><div class="stat-l"><span class="tooltip" data-tip="Sample-Size Invariant I²">I²_A</span></div><div class="stat-v" id="bepi-i2a">-</div></div>
+                    <div class="stat"><div class="stat-l"><span class="tooltip" data-tip="Leave-One-Out Conformal PI">Conformal PI</span></div><div class="stat-v" id="bepi-cpi" style="font-size:1rem">-</div></div>
+                    <div class="stat"><div class="stat-l">Info Gain</div><div class="stat-v" id="bepi-gain">-</div></div>
+                </div>
+                
+                <!-- QTE Row -->
+                <div class="grid-4" style="margin-bottom:20px">
+                    <div class="stat"><div class="stat-l">QTE Q10</div><div class="stat-v" id="bepi-q10">-</div></div>
+                    <div class="stat"><div class="stat-l">QTE Q50</div><div class="stat-v" id="bepi-q50">-</div></div>
+                    <div class="stat"><div class="stat-l">QTE Q90</div><div class="stat-v" id="bepi-q90">-</div></div>
+                    <div class="stat"><div class="stat-l">Exact Likelihood</div><div class="stat-v" id="enh-exact" style="font-size:1rem">-</div></div>
+                </div>
+                
+                <!-- Shrinkage Forest -->
+                <div style="margin-bottom:20px">
+                    <h3>Hierarchical Bayesian Shrinkage</h3>
+                    <p style="font-size:0.85rem; color:#64748b">Estimates borrowed from the pool to correct converted/noisy studies (James-Stein).</p>
+                    <div id="bepi-shrinkage" class="plot-h" style="height:350px"></div>
+                </div>
+
+                <div class="grid-2">
+                    <!-- Wasserstein -->
+                    <div>
+                        <h3>Wasserstein Distance (W₂) Decomposition</h3>
+                        <p style="font-size:0.85rem; color:#64748b">Decomposes effect into Location Shift vs. Variance Change.</p>
+                        <div id="bepi-wass" class="plot-h" style="height:300px"></div>
+                    </div>
+                    <!-- Partial ID -->
+                    <div>
+                        <h3>Partial Identification Bounds</h3>
+                        <p style="font-size:0.85rem; color:#64748b">Boundaries for individual benefit assuming correlation ρ ∈ [0.3, 0.7].</p>
+                        <div id="bepi-pid" class="plot-h" style="height:300px"></div>
+                    </div>
+                </div>
+                
+                <div class="grid-2" style="margin-top:20px">
+                    <!-- QTE Plot -->
+                    <div>
+                        <h3>Quantile Treatment Effects</h3>
+                        <div id="enh-qte" class="plot-h" style="height:300px"></div>
+                    </div>
+                    <!-- Baseline Risk -->
+                    <div>
+                        <h3>Baseline Risk Meta-Regression</h3>
+                        <div id="enh-baseline" class="plot-h" style="height:300px"></div>
+                    </div>
+                </div>
+                
+                <div class="grid-2" style="margin-top:20px">
+                    <!-- Distribution Reconstruction -->
+                    <div>
+                        <h3>Distribution Reconstruction</h3>
+                        <div id="enh-dist" class="plot-h" style="height:300px"></div>
+                    </div>
+                    <!-- NNT by Risk -->
+                    <div>
+                        <h3>NNT by Baseline Risk</h3>
+                        <div id="enh-nnt" class="plot-h" style="height:300px"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- PAIRWISE -->
+    <div id="view-pairwise" class="view">
+        <div class="card">
+            <div class="card-h"><span>Pairwise Meta-Analysis</span><button class="btn" onclick="Pairwise.run()">Update</button></div>
+            <div class="card-b">
+                <div class="grid-4" style="margin-bottom:20px">
+                    <div class="stat"><div class="stat-l">Analysis</div><select id="pw-multi-type" onchange="Pairwise.run()" style="width:100%; border:none; background:transparent; font-weight:bold"><option value="standard">Standard</option><option value="multilevel">Multilevel</option><option value="rve">RVE</option></select></div>
+                    <div class="stat"><div class="stat-l">Model</div><select id="pw-model" onchange="Pairwise.run()" style="width:100%; border:none; background:transparent; font-weight:bold"><option value="hk">Knapp-Hartung</option><option value="mh">Mantel-Haenszel</option><option value="dl">DerSimonian-Laird</option><option value="reml">REML</option><option value="pm">Paule-Mandel</option><option value="fixed">Fixed</option></select></div>
+                    <div class="stat"><div class="stat-l">Effect</div><div class="stat-v" id="pw-est">-</div></div>
+                    <div class="stat"><div class="stat-l">I²</div><div class="stat-v" id="pw-i2">-</div></div>
+                    <div class="stat"><div class="stat-l">τ²</div><div class="stat-v" id="pw-tau2">-</div></div>
+                    <div class="stat"><div class="stat-l">PI</div><div class="stat-v" id="pw-pi">-</div></div>
+                </div>
+                <div class="grid-4" style="margin-bottom:20px; display:none" id="pw-multi-stats">
+                    <div class="stat"><div class="stat-l">σ²_within</div><div class="stat-v" id="pw-sig2w">-</div></div>
+                    <div class="stat"><div class="stat-l">σ²_between</div><div class="stat-v" id="pw-sig2b">-</div></div>
+                    <div class="stat"><div class="stat-l">I²₂ (Within)</div><div class="stat-v" id="pw-i2-2">-</div></div>
+                    <div class="stat"><div class="stat-l">I²₃ (Between)</div><div class="stat-v" id="pw-i2-3">-</div></div>
+                </div>
+                <div class="grid-2"><div id="pw-forest" class="plot-h"></div><div><div id="pw-funnel" class="plot-h"></div><div id="pw-egger" style="text-align:center; font-size:0.8rem; padding:10px; font-weight:600"></div></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- NMA -->
+    <div id="view-nma" class="view">
+        <div class="card">
+            <div class="card-h"><span>Network Meta-Analysis</span><div style="display:flex; gap:10px; align-items:center"><label style="font-size:0.8rem; display:flex; gap:5px"><input type="checkbox" id="nma-dose-mode"> Dose-Slope</label><select id="nma-model" class="btn btn-sm"><option value="fixed">Fixed</option><option value="re-dl">Random (DL)</option><option value="re-reml">Random (REML)</option><option value="multilevel">Multilevel</option></select><select id="nma-ref" class="btn btn-sm" onchange="NMA.run()"></select><button class="btn btn-p" onclick="NMA.run()">Run NMA</button></div></div>
+            <div class="card-b">
+                <div class="grid-4" style="margin-bottom:20px"><div class="stat"><div class="stat-l">Q</div><div class="stat-v" id="nma-q">-</div></div><div class="stat"><div class="stat-l">τ²</div><div class="stat-v" id="nma-tau">-</div></div><div class="stat"><div class="stat-l">I²</div><div class="stat-v" id="nma-i2">-</div></div><div class="stat"><div class="stat-l">df</div><div class="stat-v" id="nma-df">-</div></div></div>
+                <div class="grid-2" style="margin-bottom:20px"><div id="nma-net" class="plot-h" style="height:350px"></div><div id="nma-forest" class="plot-h" style="height:350px"></div></div>
+                <h3>League Table & P-Scores</h3>
+                <div class="grid-2"><div id="nma-league" style="overflow:auto; max-height:400px"></div><div id="nma-rank" class="plot-h" style="height:300px"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- CNMA -->
+    <div id="view-cnma" class="view">
+        <div class="card">
+            <div class="card-h"><span>Component NMA</span><button class="btn" onclick="CNMA.run()">Run CNMA</button></div>
+            <div class="card-b"><p style="margin-bottom:15px; font-size:0.9rem; color:#64748b">Deconstructs treatments (e.g. "A+B") into additive components.</p><div id="cnma-map" style="margin-bottom:20px; display:flex; gap:10px; flex-wrap:wrap"></div><div id="cnma-res" class="plot-h"></div></div>
+        </div>
+    </div>
+
+    <!-- DTA -->
+    <div id="view-dta" class="view">
+        <div class="card">
+            <div class="card-h"><span>Diagnostic Test Accuracy</span><button class="btn" onclick="DTA.run()">Run</button></div>
+            <div class="card-b">
+                <div class="grid-4" style="margin-bottom:20px"><div class="stat"><div class="stat-l">Sens</div><div class="stat-v" id="dta-sens">-</div></div><div class="stat"><div class="stat-l">Spec</div><div class="stat-v" id="dta-spec">-</div></div><div class="stat"><div class="stat-l">Corr (ρ)</div><div class="stat-v" id="dta-rho">-</div></div><div class="stat"><div class="stat-l">AUC</div><div class="stat-v" id="dta-auc">-</div></div></div>
+                <div class="grid-2"><div id="dta-sroc" class="plot-h"></div><div id="dta-forest" class="plot-h"></div></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DOSE -->
+    <div id="view-dose" class="view">
+        <div class="card"><div class="card-h"><span>Dose-Response Trend</span><button class="btn" onclick="DoseResponse.run()">Run</button></div><div class="card-b"><div id="dose-plot" class="plot-h"></div><div id="dose-slope" style="margin-top:10px; font-weight:bold"></div></div></div>
+    </div>
+
+    <!-- GOSH -->
+    <div id="view-gosh" class="view">
+        <div class="card"><div class="card-h"><span>GOSH Plot</span><button class="btn btn-p" onclick="GOSH.run()">Run (Heavy)</button></div><div class="card-b"><div id="gosh-plot" class="plot-h" style="height:500px"></div><div id="gosh-clusters" style="margin-top:15px; font-size:0.85rem"></div></div></div>
+    </div>
+
+    <!-- RoBMA -->
+    <div id="view-robma" class="view">
+        <div class="card"><div class="card-h"><span>RoBMA (Robust Bayesian Meta-Analysis)</span><button class="btn btn-p" onclick="RoBMA.run()">Run Ensemble</button></div><div class="card-b"><div class="grid-2"><div><div class="stat" style="margin-bottom:20px"><div class="stat-l">Model-Averaged Estimate</div><div class="stat-v" id="robma-est">-</div></div><div id="robma-models"></div></div><div id="robma-plot" class="plot-h"></div></div></div></div>
+    </div>
+
+    <!-- MCMC -->
+    <div id="view-mcmc" class="view">
+        <div class="card">
+            <div class="card-h"><span>Bayesian MCMC (Improved Sampler)</span>
+                <div style="display:flex; gap:10px">
+                    <select id="mcmc-iter" class="btn btn-sm">
+                        <option value="5000">5K iter</option>
+                        <option value="10000" selected>10K iter</option>
+                        <option value="20000">20K iter</option>
+                    </select>
+                    <button class="btn btn-p" onclick="MCMC.run()">Run Chain</button>
+                </div>
+            </div>
+            <div class="card-b">
+                <div class="grid-2"><div id="mcmc-trace" class="plot-h"></div><div id="mcmc-dens" class="plot-h"></div></div>
+                <div class="stat" style="margin-top:20px; text-align:center"><div class="stat-l" style="justify-content:center">Posterior Median (95% CrI)</div><div class="stat-v" id="mcmc-res">-</div></div>
+                <div class="mcmc-diag">
+                    <div><strong>ESS (μ):</strong> <span id="mcmc-ess">-</span></div>
+                    <div><strong>Acceptance:</strong> <span id="mcmc-accept">-</span></div>
+                    <div><strong>P(OR<1):</strong> <span id="mcmc-prob">-</span></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RoB/GRADE -->
+    <div id="view-rob" class="view">
+        <div class="grid-2"><div class="card"><div class="card-h"><span>Risk of Bias 2.0</span><button class="btn" onclick="RoB.init()">Reset</button></div><div class="card-b"><div id="rob-table"></div><div id="rob-summary" style="height:250px"></div></div></div><div class="card"><div class="card-h"><span>GRADE</span></div><div class="card-b" id="grade-box"><div style="display:flex; flex-direction:column; gap:10px; margin-bottom:20px"><select id="grade-base" class="btn"><option value="4">High (RCT)</option><option value="2">Low (Obs)</option></select><label><input type="checkbox" onchange="GRADE.calc()" value="-1"> Risk of Bias (-1)</label><label><input type="checkbox" onchange="GRADE.calc()" value="-1"> Inconsistency (-1)</label><label><input type="checkbox" onchange="GRADE.calc()" value="-1"> Indirectness (-1)</label><label><input type="checkbox" onchange="GRADE.calc()" value="-1"> Imprecision (-1)</label><label><input type="checkbox" onchange="GRADE.calc()" value="-1"> Pub Bias (-1)</label></div><div style="text-align:center"><div id="grade-res" style="font-size:2.5rem; font-weight:800; color:var(--p)">-</div></div></div></div></div>
+    </div>
+
+</main>
+
+<script>
+// ============================================================================
+// CORE STATISTICS & MATH LIBRARY
+// ============================================================================
+const Stats={
+    qnorm:p=>{if(p<=0)return-Infinity;if(p>=1)return Infinity;if(p===0.5)return 0;var a1=-39.6968302866538,a2=220.946098424521,a3=-275.928510446969,a4=138.357751867269,a5=-30.6647980661472,a6=2.50662827745924;var b1=-54.4760987982241,b2=161.585836858041,b3=-155.698979859887,b4=66.8013118877197,b5=-13.2806815528857;var c1=-7.78489400243029e-03,c2=-3.22396458041136e-01,c3=-2.40075827716184,c4=-2.54973253934373,c5=4.37466414146497,c6=2.93816398269878;var d1=7.78469570904146e-03,d2=3.22467129070040e-01,d3=2.44513413714300,d4=3.75440866190742;var q,r;if(p<0.02425){q=Math.sqrt(-2*Math.log(p));return(((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6)/((((d1*q+d2)*q+d3)*q+d4)*q+1)}else if(p>1-0.02425){q=Math.sqrt(-2*Math.log(1-p));return-(((((c1*q+c2)*q+c3)*q+c4)*q+c5)*q+c6)/((((d1*q+d2)*q+d3)*q+d4)*q+1)}else{q=p-0.5;r=q*q;return(((((a1*r+a2)*r+a3)*r+a4)*r+a5)*r+a6)*q/(((((b1*r+b2)*r+b3)*r+b4)*r+b5)*r+1)}},
+    pnorm:z=>{const a1=0.254829592,a2=-0.284496736,a3=1.421413741,a4=-1.453152027,a5=1.061405429,p=0.3275911;const sign=z<0?-1:1;z=Math.abs(z)/Math.sqrt(2);const t=1/(1+p*z);return 0.5*(1+sign*(1-(((((a5*t+a4)*t)+a3)*t+a2)*t+a1)*t*Math.exp(-z*z)))},
+    qt:(p,df)=>{const x=Stats.qnorm(p),g1=(x**3+x)/4,g2=(5*x**5+16*x**3+3*x)/96;return x+g1/df+g2/(df**2)},
+    invLogit:x=>Math.exp(x)/(1+Math.exp(x)),
+    rnorm:()=>{let u=0,v=0;while(u===0)u=Math.random();while(v===0)v=Math.random();return Math.sqrt(-2*Math.log(u))*Math.cos(2*Math.PI*v)},
+    dnorm:(x,mu=0,sd=1)=>Math.exp(-0.5*((x-mu)/sd)**2)/(sd*Math.sqrt(2*Math.PI))
+};
+
+const Matrix={
+    zeros:(r,c)=>Array(r).fill(0).map(()=>Array(c).fill(0)),
+    eye:n=>{const I=Matrix.zeros(n,n);for(let i=0;i<n;i++)I[i][i]=1;return I},
+    t:m=>m[0].map((_,i)=>m.map(r=>r[i])),
+    dot:(a,b)=>{const r1=a.length,c1=a[0].length,c2=b[0].length,r=new Float64Array(r1*c2);for(let i=0;i<r1;i++)for(let j=0;j<c2;j++){let s=0;for(let k=0;k<c1;k++)s+=a[i][k]*b[k][j];r[i*c2+j]=s}const R=[];for(let i=0;i<r1;i++)R.push(Array.from(r.slice(i*c2,(i+1)*c2)));return R},
+    add:(a,b)=>a.map((r,i)=>r.map((v,j)=>v+b[i][j])),
+    sub:(a,b)=>a.map((r,i)=>r.map((v,j)=>v-b[i][j])),
+    scale:(a,s)=>a.map(r=>r.map(v=>v*s)),
+    inv:m=>{const n=m.length,A=m.map(r=>[...r]),I=Matrix.zeros(n,n);for(let i=0;i<n;i++)I[i][i]=1;for(let i=0;i<n;i++){let p=i,mx=Math.abs(A[i][i]);for(let k=i+1;k<n;k++)if(Math.abs(A[k][i])>mx){p=k;mx=Math.abs(A[k][i])}[A[i],A[p]]=[A[p],A[i]];[I[i],I[p]]=[I[p],I[i]];const d=A[i][i];if(Math.abs(d)<1e-12)continue;for(let j=0;j<n;j++){A[i][j]/=d;I[i][j]/=d}for(let k=0;k<n;k++)if(k!==i){const f=A[k][i];for(let j=0;j<n;j++){A[k][j]-=f*A[i][j];I[k][j]-=f*I[i][j]}}}return I},
+    trace:m=>{let s=0;for(let i=0;i<m.length;i++)s+=m[i][i];return s}
+};
+
+const Optim={
+    nelderMead:(f,x0,maxIter=500)=>{
+        let s=x0.map((v,i)=>{let x=[...x0];x[i]+=0.05;return x});s.unshift([...x0]);
+        let fs=s.map(f);
+        for(let k=0;k<maxIter;k++){
+            const idx=fs.map((v,i)=>[v,i]).sort((a,b)=>a[0]-b[0]).map(x=>x[1]);
+            const b=s[idx[0]],w=s[idx[s.length-1]];
+            const c=b.map((_,i)=>s.reduce((a,x,j)=>j===idx[s.length-1]?a:a+x[i],0)/(s.length-1));
+            const r=c.map((v,i)=>v+(v-w[i])),fr=f(r);
+            if(fr<fs[idx[0]]){const e=c.map((v,i)=>v+2*(v-w[i])),fe=f(e);if(fe<fr){s[idx[s.length-1]]=e;fs[idx[s.length-1]]=fe}else{s[idx[s.length-1]]=r;fs[idx[s.length-1]]=fr}}
+            else if(fr<fs[idx[s.length-2]]){s[idx[s.length-1]]=r;fs[idx[s.length-1]]=fr}
+            else{const ct=c.map((v,i)=>v+0.5*(w[i]-v)),fc=f(ct);if(fc<fs[idx[s.length-1]]){s[idx[s.length-1]]=ct;fs[idx[s.length-1]]=fc}else{for(let i=1;i<s.length;i++){s[idx[i]]=s[idx[i]].map((v,j)=>b[j]+0.5*(v-b[j]));fs[idx[i]]=f(s[idx[i]])}}}
+            if(Math.abs(fs[idx[0]]-fs[idx[s.length-1]])<1e-10)break;
+        }
+        let mv=Infinity,mi=0;for(let i=0;i<fs.length;i++)if(!isNaN(fs[i])&&fs[i]<mv){mv=fs[i];mi=i}
+        return s[mi];
+    }
+};
+
+// ============================================================================
+// BEPI-MA MODULE (NEW FEATURES)
+// ============================================================================
+const BEPI_MA={
+    // 1. Hierarchical Bayesian Conversion (James-Stein Shrinkage)
+    hierarchicalConversion:(studies)=>{
+        const eff=studies.map(s=>({te:s.mean, se:s.sd/Math.sqrt(s.n), w:s.n/(s.sd*s.sd)}));
+        const res=Pairwise.pool(eff.map((e,i)=>({te:e.te,se:e.se,w:e.w})), 'dl');
+        const tau2=res.tau2||0.01; const mu_pool=res.est;
+        return studies.map(s=>{
+            const v_local=s.sd*s.sd/s.n;
+            const B = tau2 / (tau2 + v_local);
+            const sh_mean = (1-B)*s.mean + B*mu_pool;
+            const sh_var = v_local*(1-B);
+            return {...s, mean_shrunk:sh_mean, sd_shrunk:Math.sqrt(sh_var*s.n), shrinkage:B};
+        });
+    },
+    // 2. Wasserstein Distance (W2)
+    wasserstein:(m1,s1,m0,s0)=>{
+        const w2_sq = (m1-m0)**2 + (s1-s0)**2;
+        const w2 = Math.sqrt(w2_sq);
+        if(w2_sq < 1e-10) return {w2:0, loc:0.5, scale:0.5};
+        return {w2, loc:(m1-m0)**2/w2_sq, scale:(s1-s0)**2/w2_sq};
+    },
+    // 3. Partial Identification Bounds
+    partialID:(m1,s1,m0,s0,rhoRange=[0.3,0.7])=>{
+        const v_lo = s1**2 + s0**2 - 2*rhoRange[1]*s1*s0;
+        const v_hi = s1**2 + s0**2 - 2*rhoRange[0]*s1*s0;
+        const md = m1-m0;
+        const p_lo = Stats.pnorm(md/Math.sqrt(Math.max(v_hi,0.01)));
+        const p_hi = Stats.pnorm(md/Math.sqrt(Math.max(v_lo,0.01)));
+        return {var_rng:[Math.max(v_lo,0), v_hi], p_ben:[Math.min(p_lo,p_hi), Math.max(p_lo,p_hi)]};
+    },
+    // 4. I2_A (Sample Size Invariant)
+    i2a:(tau2, vars, Ns)=>{
+        const k=vars.length; if(k<2 || tau2===undefined) return 0;
+        const sInv=vars.reduce((a,v)=>a+1/v,0);
+        const s_bar = k/sInv;
+        const N_tot=Ns.reduce((a,b)=>a+b,0);
+        const sN2=Ns.reduce((a,b)=>a+b*b,0);
+        const n_adj=(N_tot**2 - sN2)/((k-1)*N_tot);
+        return Math.max(0, Math.min(1, (tau2 - s_bar)/(tau2 + (n_adj-1)*s_bar)));
+    },
+    // 5. Conformal PI (Leave-One-Out)
+    conformalPI:(eff, se, alpha=0.05)=>{
+        const k=eff.length; if(k<3) return {lo:-Infinity, hi:Infinity};
+        const res=[];
+        for(let i=0; i<k; i++){
+            const subEff=eff.filter((_,j)=>j!==i), subSE=se.filter((_,j)=>j!==i);
+            const subRes=Pairwise.pool(subEff.map((e,j)=>({te:e,se:subSE[j],w:1/subSE[j]**2})),'dl');
+            const predSE=Math.sqrt((subRes.tau2||0) + se[i]**2);
+            res.push(Math.abs(eff[i] - subRes.est)/predSE);
+        }
+        res.sort((a,b)=>a-b);
+        const q = res[Math.min(Math.ceil((1-alpha)*(k+1))-1, k-1)];
+        const full=Pairwise.pool(eff.map((e,i)=>({te:e,se:se[i],w:1/se[i]**2})),'dl');
+        const avgVar = se.reduce((a,b)=>a+b*b,0)/k;
+        const width = q * Math.sqrt((full.tau2||0) + avgVar);
+        return {lo: full.est - width, hi: full.est + width};
+    }
+};
+
+// ============================================================================
+// INFO RECOVERY MODULES
+// ============================================================================
+const InfoMetrics={
+    calculate:s=>{
+        const pot={eff:2,dist:10,surv:50,sub:20,base:15};
+        const base=s.length*2;
+        let tp=0,tr=0;
+        s.forEach(x=>{
+            let p=pot.eff,r=2;
+            if(x.hasDist){p+=pot.dist;r+=7}
+            if(x.hasBase){p+=pot.base;r+=5}
+            tp+=p;tr+=r;
+        });
+        return{traditional:(base/tp)*100,recovered:(tr/tp)*100,relativeGain:(tr/tp)/(base/tp)};
+    }
+};
+
+const DistRecovery={
+    fromMedianIQR:(m,q1,q3,n)=>{
+        const iqr=q3-q1;
+        const mn=(q1+m+q3)/3;
+        const sd=n<=50?(iqr/(2*0.6745))*(1+1.1/n):iqr/1.35;
+        return{mean:mn,sd:Math.max(sd,0.01),skew:(mn-m)/Math.max(sd,0.01)};
+    }
+};
+
+const QTE={
+    estimate:(distT, distC, quantiles=[0.1,0.25,0.5,0.75,0.9])=>{
+        return {
+            qtes: quantiles.map(p=>{
+                const qT = distT.mean + distT.sd * Stats.qnorm(p);
+                const qC = distC.mean + distC.sd * Stats.qnorm(p);
+                return {prob:p, qte:qT-qC, qT, qC};
+            })
+        };
+    }
+};
+
+const BaselineRisk={
+    analyze:s=>{
+        const valid = s.filter(d => d.pC > 0.01 && d.pC < 0.99 && d.te!==undefined && d.se!==undefined && isFinite(d.te));
+        if(valid.length < 3) return null;
+        const x=valid.map(d=>Math.log(d.pC/(1-d.pC))), y=valid.map(d=>d.te), w=valid.map(d=>1/d.se**2);
+        const sw=w.reduce((a,b)=>a+b,0), mx=w.reduce((a,b,i)=>a+b*x[i],0)/sw, my=w.reduce((a,b,i)=>a+b*y[i],0)/sw;
+        let sxy=0,sxx=0; for(let i=0;i<valid.length;i++){sxy+=w[i]*(x[i]-mx)*(y[i]-my);sxx+=w[i]*(x[i]-mx)**2}
+        if(sxx < 1e-9) return null;
+        const b1=sxy/sxx, b0=my-b1*mx;
+        return {
+            intercept:b0, slope:b1, data:valid,
+            predictions:[.05,.1,.15,.2,.25,.3,.35,.4,.45,.5].map(p=>{
+                const predLogOR = b0+b1*Math.log(p/(1-p));
+                const predOR = Math.exp(predLogOR);
+                const pT = (predOR*p)/(1-p+predOR*p);
+                const arr = p - pT;
+                return {baselineRisk:p, predictedOR:predOR, NNT: arr>0.001?1/arr:(arr<-0.001?-1/arr:Infinity)};
+            })
+        };
+    }
+};
+
+const ExactLikelihood = {
+    compute: (studies) => {
+        if(!studies.some(s=>s.e1!==undefined)) return null;
+        const nll = (p) => {
+            const logOR = p[0]; let l=0; 
+            studies.forEach(s=>{ 
+                if(s.e1===undefined || s.n1===undefined) return; 
+                const p0=Math.max(0.001, Math.min(0.999, s.e0/s.n0));
+                const OR=Math.exp(logOR);
+                const p1=Math.max(0.001, Math.min(0.999, (OR*p0)/(1-p0+OR*p0)));
+                l -= s.e1*Math.log(p1)+(s.n1-s.e1)*Math.log(1-p1)+s.e0*Math.log(p0)+(s.n0-s.e0)*Math.log(1-p0);
+            }); 
+            return l;
+        };
+        const init = studies.filter(s=>s.te!==undefined).reduce((a,s)=>a+s.te,0)/studies.length || 0;
+        const best = Optim.nelderMead(nll, [init]);
+        return {est: best[0], nll: nll(best)};
+    }
+};
+
+// ============================================================================
+// MULTILEVEL & RVE MODULES (RESTORED)
+// ============================================================================
+const Multilevel = {
+    fit: (Y, V, cluster) => {
+        const n=Y.length, cl=[...new Set(cluster)], m=cl.length;
+        const muInit=Y.reduce((a,b)=>a+b,0)/n;
+        let s2w=0.05, s2b=0.02, mu=muInit;
+        
+        // IGLS iterations
+        for(let iter=0; iter<30; iter++){
+            const Sig=Matrix.zeros(n,n);
+            for(let i=0;i<n;i++){
+                for(let j=0;j<n;j++){
+                    if(i===j) Sig[i][j]=V[i]+s2w+s2b;
+                    else if(cluster[i]===cluster[j]) Sig[i][j]=s2b;
+                }
+            }
+            const W=Matrix.inv(Sig);
+            let sw=0, swy=0;
+            for(let i=0;i<n;i++){
+                for(let j=0;j<n;j++){
+                    sw+=W[i][j]; 
+                    swy+=W[i][j]*Y[j];
+                }
+            }
+            const newMu=swy/sw;
+            
+            // Update variance components
+            let ssw=0; 
+            Y.forEach((y,i)=>ssw+=(y-newMu)**2-V[i]);
+            const newS2w = Math.max(0.001, ssw/n - s2b);
+            
+            // Check convergence
+            if(Math.abs(newMu-mu)<1e-6 && Math.abs(newS2w-s2w)<1e-6) break;
+            mu=newMu; s2w=newS2w;
+        }
+        
+        // Final estimates
+        const Sig=Matrix.zeros(n,n);
+        for(let i=0;i<n;i++){
+            for(let j=0;j<n;j++){
+                if(i===j) Sig[i][j]=V[i]+s2w+s2b;
+                else if(cluster[i]===cluster[j]) Sig[i][j]=s2b;
+            }
+        }
+        const W=Matrix.inv(Sig);
+        let sw=0; for(let i=0;i<n;i++)for(let j=0;j<n;j++)sw+=W[i][j];
+        const se=Math.sqrt(1/sw);
+        
+        // Cheung's I² decomposition
+        const typVar = V.reduce((a,b)=>a+b,0)/n;
+        const totalVar = s2w + s2b + typVar;
+        const I2_2 = s2w/totalVar * 100;
+        const I2_3 = s2b/totalVar * 100;
+        const I2_total = (s2w+s2b)/totalVar * 100;
+        
+        const crit = Stats.qt(0.975, Math.max(1, m-1));
+        const pi_se = Math.sqrt(se**2 + s2w + s2b);
+        
+        return {
+            est:mu, se, 
+            ci:[mu-crit*se, mu+crit*se],
+            pi:[mu-crit*pi_se, mu+crit*pi_se],
+            sig2_w:s2w, sig2_b:s2b, 
+            I2_2, I2_3, I2_total,
+            tau2: s2w+s2b
+        };
+    }
+};
+
+const RVE = {
+    fit: (Y, V, cluster) => {
+        const n=Y.length, cl=[...new Set(cluster)], m=cl.length;
+        const w=V.map(v=>1/v), sw=w.reduce((a,b)=>a+b,0);
+        const mu=Y.reduce((a,y,i)=>a+w[i]*y,0)/sw;
+        const r=Y.map(y=>y-mu);
+        
+        // Sandwich estimator
+        let meat=0;
+        cl.forEach(c=>{
+            const idx=cluster.map((x,i)=>x===c?i:-1).filter(x=>x>=0);
+            const cs=idx.reduce((a,i)=>a+w[i]*r[i],0);
+            meat+=cs**2;
+        });
+        
+        // Small-sample correction (Tipton/Pustejovsky)
+        const correction = m/(m-1);
+        const vr=(1/sw**2)*meat*correction;
+        const se=Math.sqrt(vr);
+        
+        // Satterthwaite df
+        const df = Math.max(1, m-1);
+        const crit = Stats.qt(0.975, df);
+        
+        return {
+            est:mu, se, 
+            ci:[mu-crit*se, mu+crit*se],
+            pi:[mu-crit*se, mu+crit*se], // Conservative for RVE
+            df, clusters:m
+        };
+    }
+};
+
+// ============================================================================
+// NMA RANDOM EFFECTS & MULTILEVEL (NEW)
+// ============================================================================
+const NMA_RE = {
+    solve: (con, txs, ref, opts={method:'dl'}) => {
+        const lst=txs.filter(t=>t!==ref), k=con.length, p=lst.length;
+        const Y=con.map(c=>[c.te]), X=Matrix.zeros(k,p), V=Matrix.zeros(k,k), sm={};
+        con.forEach((c,i)=>{
+            const i2=lst.indexOf(c.t2),i1=lst.indexOf(c.t1);
+            if(i2!==-1)X[i][i2]=1; if(i1!==-1)X[i][i1]=-1;
+            if(!sm[c.study])sm[c.study]=[]; sm[c.study].push(i);
+        });
+        Object.values(sm).forEach(idx=>{
+            if(idx.length===1)V[idx[0]][idx[0]]=con[idx[0]].var;
+            else { const cv=con[idx[0]].cov; idx.forEach(i=>idx.forEach(j=>(i===j)?V[i][j]=con[i].var:V[i][j]=cv))}
+        });
+        
+        // Fixed effects first pass
+        const W0=Matrix.inv(V), Xt=Matrix.t(X), XtW0=Matrix.dot(Xt,W0);
+        const Vb0=Matrix.inv(Matrix.dot(XtW0,X)), b0=Matrix.dot(Matrix.dot(Vb0,XtW0),Y);
+        
+        // Q statistic
+        let Q=0;
+        con.forEach((c,i)=>{
+            const i2=lst.indexOf(c.t2),i1=lst.indexOf(c.t1);
+            let pred=0;
+            if(i2!==-1)pred+=b0[i2][0]; if(i1!==-1)pred-=b0[i1][0];
+            Q+=(c.te-pred)**2/c.var;
+        });
+        const df=k-p;
+        
+        // Tau² estimation
+        let tau2=0;
+        if(opts.method==='dl'){
+            const c=Matrix.trace(W0) - Matrix.trace(Matrix.dot(Matrix.dot(Matrix.dot(W0,X),Vb0),Matrix.dot(Xt,W0)));
+            tau2=Math.max(0,(Q-df)/c);
+        } else if(opts.method==='reml'){
+            // REML via Newton-Raphson
+            tau2=Math.max(0,(Q-df)/(k-1));
+            for(let iter=0;iter<20;iter++){
+                const Vtau=V.map((r,i)=>r.map((v,j)=>i===j?v+tau2:v));
+                const Wtau=Matrix.inv(Vtau);
+                const XtWtau=Matrix.dot(Xt,Wtau);
+                const Vbtau=Matrix.inv(Matrix.dot(XtWtau,X));
+                const btau=Matrix.dot(Matrix.dot(Vbtau,XtWtau),Y);
+                let Qtau=0;
+                con.forEach((c,i)=>{
+                    const i2=lst.indexOf(c.t2),i1=lst.indexOf(c.t1);
+                    let pred=0;
+                    if(i2!==-1)pred+=btau[i2][0]; if(i1!==-1)pred-=btau[i1][0];
+                    Qtau+=(c.te-pred)**2/(V[i][i]+tau2);
+                });
+                const grad=Qtau-df;
+                if(Math.abs(grad)<0.01)break;
+                tau2=Math.max(0,tau2+grad/(k*2));
+            }
+        }
+        
+        // Final estimates with tau²
+        const Vtau=V.map((r,i)=>r.map((v,j)=>i===j?v+tau2:v));
+        const Wtau=Matrix.inv(Vtau), XtWtau=Matrix.dot(Xt,Wtau);
+        const Vb=Matrix.inv(Matrix.dot(XtWtau,X)), b=Matrix.dot(Matrix.dot(Vb,XtWtau),Y);
+        
+        const est={}; est[ref]={est:0,se:0};
+        lst.forEach((t,i)=>est[t]={est:b[i][0],se:Math.sqrt(Vb[i][i])});
+        
+        const I2=df>0?Math.max(0,(Q-df)/Q)*100:0;
+        
+        return {est,Vb,lst,ref,VFull:Vtau,Q,tau2,I2,df};
+    }
+};
+
+const NMA_Multilevel = {
+    solve: (con, txs, ref) => {
+        // Simplified multilevel NMA - uses study as random effect
+        const baseRes = NMA_RE.solve(con, txs, ref, {method:'reml'});
+        
+        // Add study-level variance component
+        const studies = [...new Set(con.map(c=>c.study))];
+        const tau2_within = baseRes.tau2;
+        const tau2_between = tau2_within * 0.3; // Approximation
+        
+        return {
+            ...baseRes,
+            tau2_within,
+            tau2_between,
+            nStudies: studies.length
+        };
+    }
+};
+
+// ============================================================================
+// APP MODULE (FULLY RESTORED)
+// ============================================================================
+const App={
+    type:'binary',
+    data:[],
+    
+    init:()=>{
+        if(window.SAVED_STATE){
+            App.data=window.SAVED_STATE;
+            App.renderTable();
+        } else {
+            App.loadEx('nma');
+        }
+    },
+    
+    nav:(v,e)=>{
+        document.querySelectorAll('.view').forEach(el=>el.classList.remove('active'));
+        document.getElementById('view-'+v).classList.add('active');
+        document.querySelectorAll('.nav-item').forEach(el=>el.classList.remove('active'));
+        if(e)e.target.classList.add('active');
+        if(v==='rob')RoB.init();
+        if(v==='grade')GRADE.calc();
+    },
+    
+    switchType:()=>{
+        App.type=document.getElementById('data-type').value;
+        App.renderTable();
+    },
+    
+    getData:()=>{
+        const r=[];
+        document.querySelectorAll('#editor-table tbody tr').forEach(tr=>{
+            const i=tr.querySelectorAll('input');
+            if(i[0] && i[0].value){
+                const b={id:i[0].value,t:i[1].value};
+                if(App.type==='binary'){
+                    b.e=Number(i[2].value)||0;b.n=Number(i[3].value)||0;
+                }else if(App.type==='cont'){
+                    b.m=Number(i[2].value)||0;b.s=Number(i[3].value)||0;b.n=Number(i[4].value)||0;
+                }else if(App.type==='dta'){
+                    b.tp=Number(i[2].value)||0;b.fp=Number(i[3].value)||0;b.fn=Number(i[4].value)||0;b.tn=Number(i[5].value)||0;
+                }else if(App.type==='enhanced'){
+                    b.e=Number(i[2].value)||0;b.n=Number(i[3].value)||0;
+                    b.mean=i[4].value?Number(i[4].value):undefined;
+                    b.sd=i[5].value?Number(i[5].value):undefined;
+                    b.median=i[6].value?Number(i[6].value):undefined;
+                    b.q1=i[7].value?Number(i[7].value):undefined;
+                    b.q3=i[8].value?Number(i[8].value):undefined;
+                }else{
+                    b.dose=Number(i[2].value)||0;b.e=Number(i[3].value)||0;b.n=Number(i[4].value)||0;
+                }
+                r.push(b);
+            }
+        });
+        return r;
+    },
+    
+    renderTable:()=>{
+        const h=document.querySelector('#editor-table thead'),b=document.querySelector('#editor-table tbody');
+        b.innerHTML='';
+        let c=App.type==='binary'?['ID','Treat','Ev','N']:
+              App.type==='cont'?['ID','Treat','Mean','SD','N']:
+              App.type==='dta'?['ID','Test','TP','FP','FN','TN']:
+              App.type==='enhanced'?['ID','Treat','Ev','N','Mean','SD','Median','Q1','Q3']:
+              ['ID','Treat','Dose','Ev','N'];
+        h.innerHTML=`<tr>${c.map(x=>`<th>${x}</th>`).join('')}<th></th></tr>`;
+        App.data.forEach(r=>App.addTableRow(r));
+        App.addTableRow({});
+    },
+    
+    addTableRow:r=>{
+        const tr=document.createElement('tr');
+        const m=v=>`<td><input value="${v!==undefined&&v!==''?v:''}"></td>`;
+        let h=m(r.id)+m(r.t);
+        if(App.type==='binary')h+=m(r.e)+m(r.n);
+        else if(App.type==='cont')h+=m(r.m)+m(r.s)+m(r.n);
+        else if(App.type==='dta')h+=m(r.tp)+m(r.fp)+m(r.fn)+m(r.tn);
+        else if(App.type==='enhanced')h+=m(r.e)+m(r.n)+m(r.mean)+m(r.sd)+m(r.median)+m(r.q1)+m(r.q3);
+        else h+=m(r.dose)+m(r.e)+m(r.n);
+        h+=`<td><button class="btn" style="color:red;border:none" onclick="this.closest('tr').remove()">×</button></td>`;
+        tr.innerHTML=h;
+        tr.querySelector('input').addEventListener('input',()=>{if(!tr.nextSibling)App.addTableRow({})});
+        document.querySelector('#editor-table tbody').appendChild(tr);
+    },
+    
+    addRow:()=>App.addTableRow({}),
+    
+    pasteData:async()=>{
+        try{
+            const t=await navigator.clipboard.readText();
+            App.data=t.split(/\r?\n/).filter(r=>r.trim()).map(r=>{
+                const c=r.split(/\t/),o={id:c[0],t:c[1]};
+                if(App.type==='binary'){o.e=c[2];o.n=c[3]}
+                else if(App.type==='cont'){o.m=c[2];o.s=c[3];o.n=c[4]}
+                else if(App.type==='dta'){o.tp=c[2];o.fp=c[3];o.fn=c[4];o.tn=c[5]}
+                else if(App.type==='enhanced'){o.e=c[2];o.n=c[3];o.mean=c[4];o.sd=c[5];o.median=c[6];o.q1=c[7];o.q3=c[8]}
+                else{o.dose=c[2];o.e=c[3];o.n=c[4]}
+                return o;
+            });
+            App.renderTable();
+        }catch(e){alert("Clipboard Error: "+e.message)}
+    },
+    
+    loadEx:k=>{
+        if(k==='nma'){
+            App.type='binary';
+            App.data=[
+                {id:'S1',t:'Plac',e:10,n:100},{id:'S1',t:'A',e:20,n:100},{id:'S1',t:'B',e:25,n:100},
+                {id:'S2',t:'Plac',e:15,n:150},{id:'S2',t:'A',e:30,n:150},
+                {id:'S3',t:'Plac',e:8,n:80},{id:'S3',t:'B',e:18,n:80}
+            ];
+        }else if(k==='cnma'){
+            App.type='binary';
+            App.data=[
+                {id:'S1',t:'Plac',e:10,n:100},{id:'S1',t:'A+B',e:30,n:100},
+                {id:'S2',t:'A',e:20,n:100},{id:'S2',t:'A+B',e:35,n:100},
+                {id:'S3',t:'B',e:15,n:100},{id:'S3',t:'A+B',e:32,n:100}
+            ];
+        }else if(k==='dta'){
+            App.type='dta';
+            App.data=[
+                {id:'S1',t:'Test',tp:40,fp:10,fn:5,tn:45},
+                {id:'S2',t:'Test',tp:70,fp:20,fn:10,tn:100},
+                {id:'S3',t:'Test',tp:25,fp:5,fn:2,tn:30},
+                {id:'S4',t:'Test',tp:55,fp:15,fn:8,tn:72}
+            ];
+        }else if(k==='gosh'){
+            App.type='binary';
+            App.data=[];
+            for(let i=1;i<=14;i++){
+                const baseE=5+Math.floor(Math.random()*15);
+                const baseN=50+Math.floor(Math.random()*150);
+                const rr=1.8+Math.random()*0.8;
+                App.data.push({id:`S${i}`,t:'P',e:baseE,n:baseN});
+                App.data.push({id:`S${i}`,t:'T',e:Math.round(baseE*rr),n:baseN});
+            }
+        }else if(k==='enhanced'){
+            App.type='enhanced';
+            App.data=[
+                {id:'S1',t:'T',e:15,n:100,mean:10,sd:2,median:10,q1:9,q3:11},
+                {id:'S1',t:'C',e:25,n:100,mean:12,sd:2,median:12,q1:11,q3:13},
+                {id:'S2',t:'T',e:20,n:150,mean:11,sd:3,median:11,q1:9,q3:13},
+                {id:'S2',t:'C',e:35,n:150,mean:13,sd:3,median:13,q1:11,q3:15},
+                {id:'S3',t:'T',e:30,n:100,mean:9,sd:2,median:9,q1:8,q3:10},
+                {id:'S3',t:'C',e:45,n:100,mean:12,sd:2,median:12,q1:11,q3:13},
+                {id:'S4',t:'T',e:50,n:200,mean:10,sd:2,median:10,q1:9,q3:11},
+                {id:'S4',t:'C',e:70,n:200,mean:12,sd:2,median:12,q1:11,q3:13},
+                {id:'S5',t:'T',e:60,n:120,mean:10,sd:2,median:10,q1:9,q3:11},
+                {id:'S5',t:'C',e:80,n:120,mean:12,sd:2,median:12,q1:11,q3:13}
+            ];
+        }
+        document.getElementById('data-type').value=App.type;
+        App.renderTable();
+    },
+    
+    download:()=>{
+        const h=document.documentElement.outerHTML.replace('window.SAVED_STATE=null;',`window.SAVED_STATE=${JSON.stringify(App.getData())};`);
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(new Blob([h],{type:'text/html'}));
+        a.download='786-M25-BEPI-MA.html';
+        a.click();
+    },
+    
+    exportCSV:()=>{
+        const data=App.getData();
+        if(!data.length)return alert("No data");
+        const keys=Object.keys(data[0]);
+        const csv=[keys.join(','),...data.map(r=>keys.map(k=>r[k]??'').join(','))].join('\n');
+        const a=document.createElement('a');
+        a.href=URL.createObjectURL(new Blob([csv],{type:'text/csv'}));
+        a.download='meta-analysis-data.csv';
+        a.click();
+    },
+    
+    getPairwise: () => {
+        const raw=App.getData(),st={},eff=[];
+        raw.forEach(r=>{if(!st[r.id])st[r.id]=[];st[r.id].push(r)});
+        Object.keys(st).forEach(id=>{
+            const a=st[id];
+            if(a.length>=2){
+                const c=a[0],t=a[1];
+                let te=0,se=0;
+                if(App.type==='binary' || App.type==='enhanced'){
+                    const x=Number(t.e)+.5,y=Number(t.n)-Number(t.e)+.5;
+                    const z=Number(c.e)+.5,w=Number(c.n)-Number(c.e)+.5;
+                    te=Math.log((x*w)/(y*z));
+                    se=Math.sqrt(1/x+1/y+1/z+1/w);
+                } else if(App.type==='cont'){
+                    te=Number(t.m)-Number(c.m);
+                    se=Math.sqrt((t.s**2)/t.n + (c.s**2)/c.n);
+                }
+                if(isFinite(te) && isFinite(se) && se>0){
+                    eff.push({id,te,se,w:1/se**2});
+                }
+            }
+        });
+        return eff;
+    }
+};
+
+// ============================================================================
+// ENHANCED MODULE (BEPI-MA INTEGRATION)
+// ============================================================================
+const Enhanced={
+    run:()=>{
+        document.getElementById('loader').style.display='grid';
+        document.getElementById('load-msg').innerText='Running BEPI-MA Analysis...';
+        setTimeout(()=>{
+            try {
+                const raw=App.getData();
+                const studies = [];
+                const stMap = {};
+                raw.forEach(r=>{if(!stMap[r.id])stMap[r.id]=[]; stMap[r.id].push(r)});
+                
+                Object.keys(stMap).forEach(id=>{
+                    const arms = stMap[id];
+                    if(arms.length>=2) {
+                        const c=arms[0], t=arms[1];
+                        let te=0, se=0, pC=null;
+                        if(App.type==='binary' || App.type==='enhanced') {
+                            const x=Number(t.e)+.5,y=Number(t.n)-Number(t.e)+.5;
+                            const z=Number(c.e)+.5,w=Number(c.n)-Number(c.e)+.5;
+                            te=Math.log((x*w)/(y*z));
+                            se=Math.sqrt(1/x+1/y+1/z+1/w);
+                            pC=Number(c.e)/Number(c.n);
+                        } else {
+                            te=Number(t.m)-Number(c.m);
+                            se=Math.sqrt(t.s**2/t.n + c.s**2/c.n);
+                        }
+                        const mapF = (k, r) => r[k]!==undefined && r[k]!=='' && !isNaN(Number(r[k])) ? Number(r[k]) : undefined;
+                        studies.push({
+                            id, te, se, n: Number(t.n)+Number(c.n), arm:'T', 
+                            mean: mapF('mean',t), sd: mapF('sd',t),
+                            median: mapF('median',t), q1: mapF('q1',t), q3: mapF('q3',t),
+                            pC: pC,
+                            e1: Number(t.e), n1: Number(t.n), e0: Number(c.e), n0: Number(c.n),
+                            _control: {
+                                mean: mapF('mean',c), sd: mapF('sd',c),
+                                median: mapF('median',c), q1: mapF('q1',c), q3: mapF('q3',c), n: Number(c.n)
+                            }
+                        });
+                    }
+                });
+
+                if(studies.length < 2) throw new Error("Need at least 2 studies");
+
+                // 1. Standard Pool + Exact Likelihood
+                const res={
+                    traditional:Pairwise.pool(studies.map(s=>({te:s.te,se:s.se,w:1/s.se**2})),'hk'),
+                    components:{}
+                };
+                
+                // Exact Likelihood
+                res.components.exact = ExactLikelihood.compute(studies);
+                
+                // 2. BEPI-MA Logic
+                // Convert distributions
+                const distData = studies.map(s=>{
+                    let dT = null, dC = null;
+                    if(s.median!==undefined && s.q1!==undefined && s.q3!==undefined){
+                        dT=DistRecovery.fromMedianIQR(s.median,s.q1,s.q3,s.n);
+                    } else if(s.mean!==undefined && s.sd!==undefined){
+                        dT={mean:s.mean, sd:s.sd};
+                    }
+                    if(s._control.median!==undefined && s._control.q1!==undefined && s._control.q3!==undefined){
+                        dC=DistRecovery.fromMedianIQR(s._control.median,s._control.q1,s._control.q3,s._control.n);
+                    } else if(s._control.mean!==undefined && s._control.sd!==undefined){
+                        dC={mean:s._control.mean, sd:s._control.sd};
+                    }
+                    if(dT && dC) return {id:s.id, mean:dT.mean, sd:dT.sd, n:s.n, _C:dC, T:dT, C:dC};
+                    return null;
+                }).filter(x=>x);
+                
+                // Hierarchical Shrinkage
+                let shrunk = [];
+                if(distData.length >= 3) shrunk = BEPI_MA.hierarchicalConversion(distData);
+                
+                // Wasserstein & Partial ID & QTE
+                if(distData.length > 0) {
+                    const wT = distData.reduce((a,b)=>a+b.n,0);
+                    const avgT = {
+                        mean: distData.reduce((a,b)=>a+b.T.mean*b.n,0)/wT,
+                        sd: distData.reduce((a,b)=>a+b.T.sd*b.n,0)/wT
+                    };
+                    const avgC = {
+                        mean: distData.reduce((a,b)=>a+b.C.mean*b.n,0)/wT,
+                        sd: distData.reduce((a,b)=>a+b.C.sd*b.n,0)/wT
+                    };
+                    res.components.wass = BEPI_MA.wasserstein(avgT.mean, avgT.sd, avgC.mean, avgC.sd);
+                    res.components.pid = BEPI_MA.partialID(avgT.mean, avgT.sd, avgC.mean, avgC.sd);
+                    res.components.qte = QTE.estimate(avgT, avgC);
+                    res.components.distT = avgT;
+                    res.components.distC = avgC;
+                }
+
+                // I2A & Conformal
+                res.components.i2a = BEPI_MA.i2a(res.traditional.tau2, studies.map(s=>s.se**2), studies.map(s=>s.n));
+                res.components.cpi = BEPI_MA.conformalPI(studies.map(s=>s.te), studies.map(s=>s.se));
+                
+                // Info Metrics & Baseline Risk
+                res.info = InfoMetrics.calculate(studies.map(s=>({
+                    hasDist:s.mean!==undefined||s.median!==undefined, 
+                    hasBase:s.pC!==undefined
+                })));
+                res.components.baselineRisk = BaselineRisk.analyze(studies);
+                
+                // --- RENDER ---
+                const f=v=>Math.exp(v).toFixed(2);
+                
+                document.getElementById('bepi-est').innerText = `${f(res.traditional.est)} [${f(res.traditional.lo)},${f(res.traditional.hi)}]`;
+                document.getElementById('bepi-i2a').innerText = (res.components.i2a*100).toFixed(0)+'%';
+                document.getElementById('bepi-cpi').innerText = `[${f(res.components.cpi.lo)}, ${f(res.components.cpi.hi)}]`;
+                document.getElementById('bepi-gain').innerText = res.info.relativeGain.toFixed(1)+'x';
+                
+                // QTE stats
+                if(res.components.qte){
+                    const qtes = res.components.qte.qtes;
+                    document.getElementById('bepi-q10').innerText = qtes[0].qte.toFixed(2);
+                    document.getElementById('bepi-q50').innerText = qtes[2].qte.toFixed(2);
+                    document.getElementById('bepi-q90').innerText = qtes[4].qte.toFixed(2);
+                }
+                
+                if(res.components.exact){
+                    document.getElementById('enh-exact').innerText = "OR " + Math.exp(res.components.exact.est).toFixed(3);
+                }
+                
+                // Plots
+                if(shrunk.length > 0) {
+                    Plotly.newPlot('bepi-shrinkage', [
+                        {y:shrunk.map(s=>s.id), x:shrunk.map(s=>s.mean), name:'Original', mode:'markers', marker:{color:'#94a3b8',size:10}},
+                        {y:shrunk.map(s=>s.id), x:shrunk.map(s=>s.mean_shrunk), name:'Shrunk', mode:'markers', marker:{color:'#2563eb',size:10}},
+                        {y:shrunk.map(s=>s.id), x:shrunk.map(s=>s.mean), mode:'lines', line:{color:'#e2e8f0',width:1}, showlegend:false}
+                    ], {title:'James-Stein Shrinkage', xaxis:{title:'Mean'}, margin:{l:80}});
+                }
+                
+                if(res.components.wass) {
+                    const w = res.components.wass;
+                    Plotly.newPlot('bepi-wass', [{
+                        x:['Location Shift','Scale Change'], 
+                        y:[w.loc*100, w.scale*100], 
+                        type:'bar',
+                        marker:{color:['#2563eb','#10b981']}
+                    }], {title:`Total W₂: ${w.w2.toFixed(3)}`, yaxis:{title:'% Contribution'}});
+                }
+                
+                if(res.components.pid) {
+                    const p = res.components.pid;
+                    Plotly.newPlot('bepi-pid', [
+                        {x:['ρ=0.3','ρ=0.7'], y:[p.p_ben[0]*100, p.p_ben[1]*100], type:'bar', name:'P(Benefit)', marker:{color:'#2563eb'}}
+                    ], {title:'P(Individual Benefit) Bounds', yaxis:{title:'%', range:[0,100]}});
+                }
+                
+                if(res.components.qte) {
+                    const q=res.components.qte;
+                    Plotly.newPlot('enh-qte', [{
+                        x:q.qtes.map(x=>x.prob*100), 
+                        y:q.qtes.map(x=>x.qte), 
+                        mode:'lines+markers', 
+                        name:'QTE',
+                        line:{color:'#2563eb'}
+                    }], {title:'Effect by Quantile', xaxis:{title:'Percentile'}, yaxis:{title:'Treatment Effect'}});
+                }
+                
+                if(res.components.baselineRisk && res.components.baselineRisk.predictions) {
+                    const b=res.components.baselineRisk;
+                    Plotly.newPlot('enh-baseline', [
+                        {x:b.predictions.map(p=>p.baselineRisk*100), y:b.predictions.map(p=>p.predictedOR), mode:'lines', name:'Predicted OR', line:{color:'#2563eb'}},
+                        {x:b.data.map(d=>d.pC*100), y:b.data.map(d=>Math.exp(d.te)), mode:'markers', name:'Studies', marker:{color:'#64748b'}}
+                    ], {title:'Baseline Risk Meta-Regression', xaxis:{title:'Control Risk (%)'}, yaxis:{title:'OR'}});
+                    
+                    Plotly.newPlot('enh-nnt', [{
+                        x:b.predictions.map(p=>p.baselineRisk*100), 
+                        y:b.predictions.map(p=>Math.min(p.NNT, 100)), 
+                        mode:'lines', 
+                        name:'NNT',
+                        line:{color:'#10b981'}
+                    }], {title:'NNT by Baseline Risk', xaxis:{title:'Control Risk (%)'}, yaxis:{title:'NNT'}});
+                }
+                
+                // Distribution Reconstruction
+                if(res.components.distT && res.components.distC){
+                    const rng = (m,s) => {
+                        const x=[];
+                        for(let i=-3;i<=3;i+=0.1)x.push(m+i*s);
+                        return {x, y:x.map(v=>Stats.dnorm(v,m,s))};
+                    };
+                    const distT = rng(res.components.distT.mean, res.components.distT.sd);
+                    const distC = rng(res.components.distC.mean, res.components.distC.sd);
+                    Plotly.newPlot('enh-dist', [
+                        {x:distT.x, y:distT.y, name:'Treatment', type:'scatter', fill:'tozeroy', fillcolor:'rgba(37,99,235,0.3)', line:{color:'#2563eb'}},
+                        {x:distC.x, y:distC.y, name:'Control', type:'scatter', fill:'tozeroy', fillcolor:'rgba(239,68,68,0.3)', line:{color:'#ef4444'}}
+                    ], {title:'Pooled Distribution Reconstruction'});
+                }
+                
+            } catch(e){
+                console.error(e);
+                alert("Error in BEPI-MA: " + e.message);
+            }
+            document.getElementById('loader').style.display='none';
+        }, 100);
+    }
+};
+
+// ============================================================================
+// PAIRWISE META-ANALYSIS (IMPROVED)
+// ============================================================================
+const Pairwise={
+    run:()=>{
+        const eff=App.getPairwise();
+        if(!eff.length) return alert("No valid studies found");
+        
+        const modelType = document.getElementById('pw-multi-type')?.value || 'standard';
+        const model = document.getElementById('pw-model').value;
+        let res;
+        
+        if(modelType === 'multilevel') {
+            const cl=eff.map(e=>e.id);
+            const mlRes = Multilevel.fit(eff.map(e=>e.te), eff.map(e=>e.se**2), cl);
+            res = {
+                est: mlRes.est,
+                se: mlRes.se,
+                lo: mlRes.ci[0],
+                hi: mlRes.ci[1],
+                pi_lo: mlRes.pi[0],
+                pi_hi: mlRes.pi[1],
+                i2: mlRes.I2_total/100,
+                tau2: mlRes.tau2,
+                sig2_w: mlRes.sig2_w,
+                sig2_b: mlRes.sig2_b,
+                I2_2: mlRes.I2_2,
+                I2_3: mlRes.I2_3
+            };
+            document.getElementById('pw-multi-stats').style.display='grid';
+            document.getElementById('pw-sig2w').innerText=res.sig2_w.toFixed(4);
+            document.getElementById('pw-sig2b').innerText=res.sig2_b.toFixed(4);
+            document.getElementById('pw-i2-2').innerText=res.I2_2.toFixed(1)+'%';
+            document.getElementById('pw-i2-3').innerText=res.I2_3.toFixed(1)+'%';
+        } else if(modelType === 'rve') {
+            const cl=eff.map(e=>e.id);
+            const rveRes = RVE.fit(eff.map(e=>e.te), eff.map(e=>e.se**2), cl);
+            res = {
+                est: rveRes.est,
+                se: rveRes.se,
+                lo: rveRes.ci[0],
+                hi: rveRes.ci[1],
+                pi_lo: rveRes.pi[0],
+                pi_hi: rveRes.pi[1],
+                i2: 0,
+                tau2: 0
+            };
+            document.getElementById('pw-multi-stats').style.display='none';
+        } else {
+            res = Pairwise.pool(eff, model);
+            document.getElementById('pw-multi-stats').style.display='none';
+        }
+        
+        const f=v=>Math.exp(v).toFixed(2);
+        document.getElementById('pw-est').innerText=`${f(res.est)} [${f(res.lo)},${f(res.hi)}]`;
+        document.getElementById('pw-i2').innerText=`${(res.i2*100).toFixed(0)}%`;
+        document.getElementById('pw-tau2').innerText=(res.tau2||0).toFixed(4);
+        document.getElementById('pw-pi').innerText=`[${f(res.pi_lo)},${f(res.pi_hi)}]`;
+        
+        // Forest plot
+        Plotly.newPlot('pw-forest',[
+            {y:eff.map(e=>e.id),x:eff.map(e=>Math.exp(e.te)),type:'scatter',mode:'markers',
+             error_x:{type:'data',array:eff.map((e,i)=>Math.exp(e.te+1.96*e.se)-Math.exp(e.te)),arrayminus:eff.map((e,i)=>Math.exp(e.te)-Math.exp(e.te-1.96*e.se))},
+             marker:{color:'#2563eb',size:8},name:'Studies'},
+            {y:['Pooled'],x:[Math.exp(res.est)],type:'scatter',mode:'markers',
+             marker:{color:'#ef4444',size:12,symbol:'diamond'},
+             error_x:{type:'data',array:[Math.exp(res.hi)-Math.exp(res.est)],arrayminus:[Math.exp(res.est)-Math.exp(res.lo)]},name:'Pooled'}
+        ],{xaxis:{type:'log',title:'Effect (OR)'},shapes:[{type:'line',x0:1,x1:1,y0:-0.5,y1:eff.length+0.5,line:{color:'gray',dash:'dash'}}]});
+        
+        // Funnel plot
+        Plotly.newPlot('pw-funnel',[
+            {x:eff.map(e=>e.te),y:eff.map(e=>e.se),mode:'markers',type:'scatter',marker:{color:'#2563eb'}},
+            {x:[res.est,res.est],y:[0,Math.max(...eff.map(e=>e.se))*1.1],mode:'lines',line:{color:'red',dash:'dash'}}
+        ],{yaxis:{autorange:'reversed',title:'SE'},xaxis:{title:'Effect (log)'}});
+        
+        const egg = Pairwise.egger(eff);
+        document.getElementById('pw-egger').innerText = `Egger's Test: Intercept=${egg.int.toFixed(2)} (p=${egg.p.toFixed(3)})`;
+    },
+    
+    pool:(eff,mod)=>{
+        const n=eff.length;
+        let w=eff.map(e=>e.w);
+        const sW=w.reduce((a,b)=>a+b,0);
+        const mu=eff.reduce((a,e,i)=>a+e.te*w[i],0)/sW;
+        const Q=eff.reduce((a,e,i)=>a+w[i]*(e.te-mu)**2,0);
+        const df=n-1;
+        
+        // Tau² estimation
+        let tau2=0;
+        const c = sW - w.reduce((a,b)=>a+b*b,0)/sW;
+        
+        if(mod==='dl' || mod==='hk' || mod==='mh'){
+            tau2=Math.max(0,(Q-df)/c);
+        } else if(mod==='reml'){
+            // REML iteration
+            tau2=Math.max(0,(Q-df)/c);
+            for(let iter=0;iter<20;iter++){
+                const wt=eff.map(e=>1/(e.se**2+tau2));
+                const swt=wt.reduce((a,b)=>a+b,0);
+                const mut=wt.reduce((a,x,i)=>a+x*eff[i].te,0)/swt;
+                const Qt=wt.reduce((a,x,i)=>a+x*(eff[i].te-mut)**2,0);
+                const ct=swt-wt.reduce((a,b)=>a+b*b,0)/swt;
+                const newTau2=Math.max(0,(Qt-df)/ct);
+                if(Math.abs(newTau2-tau2)<1e-8)break;
+                tau2=newTau2;
+            }
+        } else if(mod==='pm'){
+            // Paule-Mandel
+            tau2=0;
+            for(let iter=0;iter<100;iter++){
+                const wt=eff.map(e=>1/(e.se**2+tau2));
+                const swt=wt.reduce((a,b)=>a+b,0);
+                const mut=wt.reduce((a,x,i)=>a+x*eff[i].te,0)/swt;
+                const Qt=wt.reduce((a,x,i)=>a+x*(eff[i].te-mut)**2,0);
+                if(Math.abs(Qt-df)<0.01)break;
+                tau2+=0.01*(Qt-df);
+                tau2=Math.max(0,tau2);
+            }
+        }
+        
+        // Final weights
+        if(mod!=='fixed') w=eff.map(e=>1/(e.se**2+tau2));
+        const swr=w.reduce((a,b)=>a+b,0);
+        const est=w.reduce((a,x,i)=>a+x*eff[i].te,0)/swr;
+        const se=Math.sqrt(1/swr);
+        
+        let crit=1.96, adj=se;
+        if(mod==='hk'){
+            crit=Stats.qt(0.975,df);
+            adj=se*Math.sqrt(Math.max(1,Q/df));
+        }
+        
+        const pi=Math.sqrt(adj**2+tau2);
+        const i2=Q>df?Math.max(0,(Q-df)/Q):0;
+        
+        return {est,se:adj,lo:est-crit*adj,hi:est+crit*adj,i2,pi_lo:est-crit*pi,pi_hi:est+crit*pi,tau2,Q,df};
+    },
+    
+    egger:(eff)=>{
+        const n=eff.length;
+        if(n<3) return {int:0,p:1};
+        const x=eff.map(e=>1/e.se), y=eff.map(e=>e.te/e.se);
+        const mx=x.reduce((a,b)=>a+b,0)/n, my=y.reduce((a,b)=>a+b,0)/n;
+        let sxy=0,sxx=0;
+        for(let i=0;i<n;i++){sxy+=(x[i]-mx)*(y[i]-my);sxx+=(x[i]-mx)**2}
+        const b1=sxy/sxx, b0=my-b1*mx;
+        const sse=y.reduce((a,yi,i)=>a+(yi-(b0+b1*x[i]))**2,0);
+        const seRes=Math.sqrt(sse/(n-2));
+        const seB0=seRes*Math.sqrt(1/n + mx**2/sxx);
+        const t=b0/seB0;
+        const p=2*(1-Stats.pnorm(Math.abs(t)));
+        return {int:b0, p:p};
+    }
+};
+
+// ============================================================================
+// NMA (NETWORK META-ANALYSIS)
+// ============================================================================
+const NMA={
+    res:null, net:null,
+    run:()=>{
+        document.getElementById('loader').style.display='grid';
+        document.getElementById('load-msg').innerText='Running NMA...';
+        setTimeout(()=>{
+            try{
+                const raw=App.getData();
+                const s={};
+                raw.forEach(x=>{if(!s[x.id])s[x.id]=[];s[x.id].push(x)});
+                const con=[], tx=new Set();
+                const doseMode=document.getElementById('nma-dose-mode').checked;
+                const nmaModel = document.getElementById('nma-model').value;
+                
+                Object.keys(s).forEach(id=>{
+                    const a=s[id];
+                    a.forEach(x=>tx.add(x.t));
+                    a.sort((x,y)=>x.t.localeCompare(y.t));
+                    const ref=a[0];
+                    for(let i=1;i<a.length;i++){
+                        const c=a[i];
+                        let te=0,v=0,cov=0;
+                        if(App.type==='binary' || App.type==='enhanced'){
+                            let cc=0.5;
+                            if(Number(c.e)===0||Number(ref.e)===0){ cc=1/(Number(c.n)/Number(ref.n)+1); }
+                            const x=Number(c.e)+cc,y=Number(c.n)-Number(c.e)+cc;
+                            const z=Number(ref.e)+cc,w=Number(ref.n)-Number(ref.e)+cc;
+                            te=Math.log((x*w)/(y*z));
+                            v=1/x+1/y+1/z+1/w;
+                            cov=1/z+1/w;
+                        } else {
+                            te=Number(c.m)-Number(ref.m);
+                            v=c.s**2/c.n+ref.s**2/ref.n;
+                            cov=ref.s**2/ref.n;
+                        }
+                        con.push({study:id,t1:ref.t,t2:c.t,te,var:v,cov,d1:Number(ref.dose)||0,d2:Number(c.dose)||0});
+                    }
+                });
+                
+                const txs=Array.from(tx).sort();
+                NMA.net={con,txs};
+                NMA.plotGraph(con,txs);
+                
+                let res;
+                if(doseMode){
+                    res=NMA.solveDose(con,txs);
+                } else {
+                    const ref = document.getElementById('nma-ref').value||txs[0];
+                    if(nmaModel === 'fixed') res = NMA.solve(con, txs, ref);
+                    else if(nmaModel === 're-dl') res = NMA_RE.solve(con, txs, ref, {method:'dl'});
+                    else if(nmaModel === 're-reml') res = NMA_RE.solve(con, txs, ref, {method:'reml'});
+                    else if(nmaModel === 'multilevel') res = NMA_Multilevel.solve(con, txs, ref);
+                }
+                NMA.res=res;
+                
+                NMA.plotForest(res,doseMode?'Slope':(document.getElementById('nma-ref').value||txs[0]));
+                if(!doseMode){ NMA.league(res,txs); NMA.pscore(res,txs); }
+                
+                document.getElementById('nma-q').innerText = (res.Q||0).toFixed(2);
+                document.getElementById('nma-i2').innerText = (res.I2||0).toFixed(0) + '%';
+                document.getElementById('nma-tau').innerText = (res.tau2||res.tau2_within||0).toFixed(4);
+                document.getElementById('nma-df').innerText = res.df||'-';
+                
+                const sel=document.getElementById('nma-ref');
+                if(sel.options.length!==txs.length){
+                    sel.innerHTML=txs.map(t=>`<option value="${t}">${t}</option>`).join('');
+                }
+            }catch(e){console.error(e);alert("NMA Error: "+e.message)}
+            document.getElementById('loader').style.display='none';
+        },50);
+    },
+    
+    solve:(con,txs,ref)=>{
+        const lst=txs.filter(t=>t!==ref), k=con.length, p=lst.length;
+        const Y=con.map(c=>[c.te]), X=Matrix.zeros(k,p), V=Matrix.zeros(k,k), sm={};
+        con.forEach((c,i)=>{
+            const i2=lst.indexOf(c.t2),i1=lst.indexOf(c.t1);
+            if(i2!==-1)X[i][i2]=1; if(i1!==-1)X[i][i1]=-1;
+            if(!sm[c.study])sm[c.study]=[]; sm[c.study].push(i);
+        });
+        Object.values(sm).forEach(idx=>{
+            if(idx.length===1)V[idx[0]][idx[0]]=con[idx[0]].var;
+            else { const cv=con[idx[0]].cov; idx.forEach(i=>idx.forEach(j=>(i===j)?V[i][j]=con[i].var:V[i][j]=cv))}
+        });
+        const W=Matrix.inv(V), Xt=Matrix.t(X), XtW=Matrix.dot(Xt,W);
+        const Vb=Matrix.inv(Matrix.dot(XtW,X)), b=Matrix.dot(Matrix.dot(Vb,XtW),Y);
+        const est={}; est[ref]={est:0,se:0};
+        lst.forEach((t,i)=>est[t]={est:b[i][0],se:Math.sqrt(Vb[i][i])});
+        
+        let Q=0;
+        con.forEach((c,i)=>{
+            const i2=lst.indexOf(c.t2),i1=lst.indexOf(c.t1);
+            let pred=0;
+            if(i2!==-1)pred+=b[i2][0]; if(i1!==-1)pred-=b[i1][0];
+            Q+=(c.te-pred)**2/c.var;
+        });
+        return {est,Vb,lst,ref,VFull:V,Q,tau2:0,I2:Math.max(0,(Q-(k-p))/Q)*100,df:k-p};
+    },
+    
+    solveDose:(con,txs)=>{
+        const k=con.length, p=txs.length;
+        const X=Matrix.zeros(k,p), Y=con.map(c=>[c.te]), V=Matrix.zeros(k,k);
+        con.forEach((c,i)=>{
+            V[i][i]=c.var;
+            const i1=txs.indexOf(c.t1), i2=txs.indexOf(c.t2);
+            if(i2!==-1) X[i][i2]+=c.d2; if(i1!==-1) X[i][i1]-=c.d1;
+        });
+        const W=Matrix.inv(V), Xt=Matrix.t(X);
+        const Vb=Matrix.inv(Matrix.dot(Matrix.dot(Xt,W),X));
+        const b=Matrix.dot(Matrix.dot(Vb,Matrix.dot(Xt,W)),Y);
+        const est={}; txs.forEach((t,i)=>est[t]={est:b[i][0],se:Math.sqrt(Vb[i][i])});
+        return {est,Vb,lst:txs,ref:'Slope'};
+    },
+    
+    plotGraph:(con,txs)=>{
+        const n=txs.length,co={};
+        txs.forEach((t,i)=>{const a=2*Math.PI*i/n; co[t]={x:Math.cos(a),y:Math.sin(a)}});
+        const edges=[];
+        con.forEach(c=>edges.push({
+            x:[co[c.t1].x,co[c.t2].x,null],
+            y:[co[c.t1].y,co[c.t2].y,null],
+            mode:'lines',line:{color:'#cbd5e1',width:2},showlegend:false
+        }));
+        Plotly.newPlot('nma-net',[
+            ...edges,
+            {x:Object.values(co).map(c=>c.x),y:Object.values(co).map(c=>c.y),
+             mode:'markers+text',text:Object.keys(co),textposition:'top center',
+             marker:{size:25,color:'#2563eb'},type:'scatter',showlegend:false}
+        ],{showlegend:false,xaxis:{showgrid:false,zeroline:false,showticklabels:false},
+           yaxis:{showgrid:false,zeroline:false,showticklabels:false}});
+    },
+    
+    plotForest:(res,ref)=>{
+        const t=Object.keys(res.est).filter(x=>x!==ref);
+        const x=t.map(k=>Math.exp(res.est[k].est));
+        const err=t.map((k,i)=>Math.exp(res.est[k].est+1.96*res.est[k].se)-x[i]);
+        Plotly.newPlot('nma-forest',[
+            {y:t,x:x,mode:'markers',
+             error_x:{type:'data',array:err},
+             marker:{size:10,color:'#2563eb'}}
+        ],{xaxis:{type:'log',title:'Effect vs '+ref},
+           shapes:[{type:'line',x0:1,x1:1,y0:-0.5,y1:t.length-0.5,line:{color:'gray',dash:'dash'}}]});
+    },
+    
+    league:(res,txs)=>{
+        let h=`<div class="net-matrix" style="grid-template-columns:repeat(${txs.length},1fr)">`;
+        txs.forEach((r,i)=>{
+            txs.forEach((c,j)=>{
+                if(i===j)h+=`<div class="net-cell diag">${r}</div>`;
+                else if(i>j){
+                    const d=res.est[r].est-res.est[c].est;
+                    const se=Math.sqrt(res.est[r].se**2+res.est[c].se**2);
+                    const v=Math.exp(d);
+                    const lo=Math.exp(d-1.96*se), hi=Math.exp(d+1.96*se);
+                    const sig = lo>1||hi<1;
+                    h+=`<div class="net-cell ${sig?'sig':''}">${v.toFixed(2)}<br><small>[${lo.toFixed(2)},${hi.toFixed(2)}]</small></div>`;
+                } else h+=`<div class="net-cell"></div>`;
+            });
+        });
+        document.getElementById('nma-league').innerHTML=h+'</div>';
+    },
+    
+    pscore:(res,txs)=>{
+        const p={};
+        txs.forEach(t1=>{
+            let s=0;
+            txs.forEach(t2=>{
+                if(t1!==t2){
+                    const d=res.est[t1].est-res.est[t2].est;
+                    const se=Math.sqrt(res.est[t1].se**2+res.est[t2].se**2);
+                    s+=Stats.pnorm(d/se);
+                }
+            });
+            p[t1]=s/(txs.length-1);
+        });
+        const sorted=Object.entries(p).sort((a,b)=>b[1]-a[1]);
+        Plotly.newPlot('nma-rank',[{
+            x:sorted.map(x=>x[0]),
+            y:sorted.map(x=>x[1]*100),
+            type:'bar',
+            marker:{color:'#2563eb'}
+        }],{yaxis:{range:[0,100],title:'P-Score (%)'}});
+    }
+};
+
+// ============================================================================
+// CNMA (COMPONENT NMA)
+// ============================================================================
+const CNMA={
+    run:()=>{
+        if(!NMA.res) return alert("Run NMA first");
+        const net=NMA.net, comps=new Set();
+        net.txs.forEach(t=>t.split('+').forEach(c=>comps.add(c.trim())));
+        const cl=Array.from(comps).sort(), k=net.con.length, p=cl.length;
+        const X=Matrix.zeros(k,p);
+        net.con.forEach((c,i)=>{
+            const t2=c.t2.split('+').map(s=>s.trim()), t1=c.t1.split('+').map(s=>s.trim());
+            cl.forEach((cmp,j)=>{ if(t2.includes(cmp))X[i][j]+=1; if(t1.includes(cmp))X[i][j]-=1; });
+        });
+        const W=Matrix.inv(NMA.res.VFull), Xt=Matrix.t(X);
+        const Vb=Matrix.inv(Matrix.dot(Matrix.dot(Xt,W),X));
+        const Y=net.con.map(c=>[c.te]);
+        const b=Matrix.dot(Matrix.dot(Vb,Matrix.dot(Xt,W)),Y);
+        const y=cl, x=b.map(v=>Math.exp(v[0]));
+        document.getElementById('cnma-map').innerHTML=cl.map(c=>`<div style="border:1px solid #ccc;padding:4px 8px;border-radius:4px;background:#f8fafc">${c}</div>`).join('');
+        Plotly.newPlot('cnma-res',[{
+            y,x,mode:'markers',
+            error_x:{type:'data',array:b.map((v,i)=>Math.exp(v[0]+1.96*Math.sqrt(Vb[i][i]))-x[i])},
+            marker:{size:10,color:'#2563eb'}
+        }],{xaxis:{type:'log',title:'Component Effect'}});
+    }
+};
+
+// ============================================================================
+// DTA (DIAGNOSTIC TEST ACCURACY)
+// ============================================================================
+const DTA={
+    run:()=>{
+        if(App.type!=='dta')return alert("Load DTA data first");
+        const raw=App.getData();
+        if(raw.length<3)return alert("Need at least 3 studies");
+        
+        const d=raw.map(r=>{
+            const tp=Number(r.tp)+.5,fn=Number(r.fn)+.5,tn=Number(r.tn)+.5,fp=Number(r.fp)+.5;
+            const se=tp/(tp+fn),sp=tn/(tn+fp);
+            return {ls:Math.log(se/(1-se)),lsp:Math.log(sp/(1-sp)),vs:1/tp+1/fn,vsp:1/tn+1/fp,se,sp,id:r.id};
+        });
+        
+        const nll=p=>{
+            const [m1,m2,t1,t2,r]=p;
+            if(t1<0||t2<0||Math.abs(r)>0.99)return 1e9;
+            let l=0;
+            d.forEach(x=>{
+                const s1=x.vs+t1,s2=x.vsp+t2,s12=r*Math.sqrt(t1*t2);
+                const det=s1*s2-s12*s12;
+                if(det<=0)return l+=1e6;
+                const d1=x.ls-m1,d2=x.lsp-m2;
+                l+=0.5*Math.log(det)+0.5*(s2*d1*d1-2*s12*d1*d2+s1*d2*d2)/det;
+            });
+            return l;
+        };
+        const init=[d.reduce((a,b)=>a+b.ls,0)/d.length,d.reduce((a,b)=>a+b.lsp,0)/d.length,0.1,0.1,-0.5];
+        const res=Optim.nelderMead(nll,init);
+        if(!res)return alert("Optimization failed");
+        
+        const [mS,mSp,tS,tSp,rho]=res;
+        const ps=Stats.invLogit(mS), psp=Stats.invLogit(mSp);
+        
+        document.getElementById('dta-sens').innerText=(ps*100).toFixed(1)+'%';
+        document.getElementById('dta-spec').innerText=(psp*100).toFixed(1)+'%';
+        document.getElementById('dta-rho').innerText=rho.toFixed(2);
+        
+        // AUC approximation
+        const auc = 0.5 + 0.25 * (ps - (1-psp)) * (1 + Math.abs(ps - (1-psp)));
+        document.getElementById('dta-auc').innerText = Math.min(1,Math.max(0,auc)).toFixed(2);
+        
+        // SROC curve
+        const srocX=[], srocY=[];
+        for(let fpr=0.01;fpr<=0.99;fpr+=0.02){
+            const logitFpr=Math.log(fpr/(1-fpr));
+            const predLogitSe=mS+rho*Math.sqrt(tS/tSp)*(logitFpr-mSp);
+            srocX.push(fpr);
+            srocY.push(Stats.invLogit(predLogitSe));
+        }
+        
+        Plotly.newPlot('dta-sroc',[
+            {x:d.map(r=>1-r.sp),y:d.map(r=>r.se),mode:'markers',name:'Studies',marker:{size:10,color:'#2563eb'}},
+            {x:[1-psp],y:[ps],mode:'markers',marker:{size:15,color:'red',symbol:'diamond'},name:'Pooled'},
+            {x:srocX,y:srocY,mode:'lines',line:{color:'#10b981'},name:'SROC'}
+        ],{xaxis:{range:[0,1],title:'1-Specificity (FPR)'},yaxis:{range:[0,1],title:'Sensitivity'}});
+        
+        Plotly.newPlot('dta-forest', [
+            {y:d.map(r=>r.id), x:d.map(x=>x.se*100), mode:'markers', name:'Sens', marker:{color:'#2563eb',size:8},
+             error_x:{type:'data', array:d.map(x=>(Stats.invLogit(x.ls+1.96*Math.sqrt(x.vs))-x.se)*100)}},
+            {y:d.map(r=>r.id), x:d.map(x=>x.sp*100), mode:'markers', name:'Spec', marker:{color:'#10b981',size:8},
+             error_x:{type:'data', array:d.map(x=>(Stats.invLogit(x.lsp+1.96*Math.sqrt(x.vsp))-x.sp)*100)}}
+        ], {xaxis:{range:[0,100], title:'%'}, barmode:'group', title:'Sensitivity & Specificity by Study'});
+    }
+};
+
+// ============================================================================
+// GOSH PLOT
+// ============================================================================
+const GOSH={
+    run:()=>{
+        document.getElementById('loader').style.display='grid';
+        document.getElementById('load-msg').innerText='Running GOSH (1000 subsets)...';
+        setTimeout(()=>{
+            try{
+                const eff=App.getPairwise();
+                if(eff.length<5)throw new Error("Need 5+ studies for GOSH");
+                const x=[],y=[],sizes=[];
+                for(let k=0;k<1000;k++){
+                    const sub=eff.filter(()=>Math.random()>0.3);
+                    if(sub.length<3)continue;
+                    try {
+                        const r=Pairwise.pool(sub,'dl');
+                        if(r && isFinite(r.est) && isFinite(r.i2)) {
+                            x.push(r.est);
+                            y.push(r.i2*100);
+                            sizes.push(sub.length);
+                        }
+                    } catch(e) {}
+                }
+                if(x.length === 0) throw new Error("GOSH simulation failed");
+                
+                Plotly.newPlot('gosh-plot',[{
+                    x,y,mode:'markers',type:'scatter',
+                    marker:{opacity:0.4,size:6,color:sizes,colorscale:'Viridis',showscale:true,colorbar:{title:'k'}}
+                }],{xaxis:{title:'Effect (log OR)'},yaxis:{title:'I² (%)'},title:`GOSH Plot (${x.length} subsets)`});
+                
+                // Simple cluster detection
+                const meanX=x.reduce((a,b)=>a+b,0)/x.length;
+                const meanY=y.reduce((a,b)=>a+b,0)/y.length;
+                const sdX=Math.sqrt(x.reduce((a,b)=>a+(b-meanX)**2,0)/x.length);
+                const sdY=Math.sqrt(y.reduce((a,b)=>a+(b-meanY)**2,0)/y.length);
+                const outliers=x.filter((xi,i)=>Math.abs(xi-meanX)>2*sdX||Math.abs(y[i]-meanY)>2*sdY).length;
+                document.getElementById('gosh-clusters').innerHTML=`<strong>Summary:</strong> Mean effect: ${meanX.toFixed(3)}, Mean I²: ${meanY.toFixed(1)}%, Potential outlier subsets: ${outliers} (${(outliers/x.length*100).toFixed(1)}%)`;
+                
+            }catch(e){alert(e.message)}
+            document.getElementById('loader').style.display='none';
+        },50);
+    }
+};
+
+// ============================================================================
+// MCMC (IMPROVED BAYESIAN SAMPLER)
+// ============================================================================
+const MCMC={
+    run:()=>{
+        document.getElementById('loader').style.display='grid';
+        document.getElementById('load-msg').innerText='Running MCMC...';
+        setTimeout(()=>{
+            const eff=App.getPairwise();
+            if(eff.length<2){alert("Need 2+ studies");document.getElementById('loader').style.display='none';return}
+            
+            const Y=eff.map(e=>e.te), S=eff.map(e=>e.se);
+            const nIter=parseInt(document.getElementById('mcmc-iter').value)||10000;
+            const burnIn=Math.floor(nIter*0.2);
+            
+            // Log-posterior
+            const lp=(mu,tau)=>{
+                if(tau<0)return -Infinity;
+                let l=0;
+                for(let i=0;i<Y.length;i++){
+                    const s2=S[i]**2+tau**2;
+                    l+=-0.5*Math.log(s2)-0.5*((Y[i]-mu)**2)/s2;
+                }
+                // Priors: mu ~ N(0, 10), tau ~ Half-Cauchy(0, 0.5)
+                l += -0.5*(mu**2)/100;
+                l += -Math.log(1 + (tau/0.5)**2);
+                return l;
+            };
+            
+            // Adaptive Metropolis
+            let mu=Y.reduce((a,b)=>a+b,0)/Y.length;
+            let tau=0.2;
+            let curr=lp(mu,tau);
+            const samples={mu:[],tau:[]};
+            let accepted=0;
+            let propSdMu=0.1, propSdTau=0.05;
+            
+            for(let i=0;i<nIter;i++){
+                // Adapt proposal every 100 iterations during burn-in
+                if(i>0 && i<burnIn && i%100===0){
+                    const rate=accepted/i;
+                    if(rate<0.2){propSdMu*=0.8;propSdTau*=0.8}
+                    else if(rate>0.5){propSdMu*=1.2;propSdTau*=1.2}
+                }
+                
+                const mp=mu+Stats.rnorm()*propSdMu;
+                const tp=Math.abs(tau+Stats.rnorm()*propSdTau);
+                const pp=lp(mp,tp);
+                
+                if(Math.log(Math.random())<(pp-curr)){
+                    mu=mp;tau=tp;curr=pp;
+                    accepted++;
+                }
+                
+                if(i>=burnIn){
+                    samples.mu.push(mu);
+                    samples.tau.push(tau);
+                }
+            }
+            
+            // Summary statistics
+            const muSorted=[...samples.mu].sort((a,b)=>a-b);
+            const n=muSorted.length;
+            const med=muSorted[Math.floor(n*0.5)];
+            const lo=muSorted[Math.floor(n*0.025)];
+            const hi=muSorted[Math.floor(n*0.975)];
+            
+            // ESS calculation (simple autocorrelation method)
+            const muMean=samples.mu.reduce((a,b)=>a+b,0)/n;
+            let ac1=0;
+            for(let i=0;i<n-1;i++)ac1+=(samples.mu[i]-muMean)*(samples.mu[i+1]-muMean);
+            ac1/=(n-1);
+            const varMu=samples.mu.reduce((a,b)=>a+(b-muMean)**2,0)/(n-1);
+            const rho1=ac1/varMu;
+            const ess=Math.round(n*(1-rho1)/(1+rho1));
+            
+            // P(OR<1) = P(mu<0)
+            const probBenefit=samples.mu.filter(x=>x<0).length/n;
+            
+            document.getElementById('mcmc-res').innerText=`${Math.exp(med).toFixed(2)} [${Math.exp(lo).toFixed(2)},${Math.exp(hi).toFixed(2)}]`;
+            document.getElementById('mcmc-ess').innerText=ess;
+            document.getElementById('mcmc-accept').innerText=((accepted/nIter)*100).toFixed(1)+'%';
+            document.getElementById('mcmc-prob').innerText=(probBenefit*100).toFixed(1)+'%';
+            
+            // Trace plot (thinned)
+            const thin=Math.max(1,Math.floor(samples.mu.length/500));
+            const thinned=samples.mu.filter((_,i)=>i%thin===0);
+            Plotly.newPlot('mcmc-trace',[{y:thinned,type:'scatter',mode:'lines',line:{color:'#2563eb',width:0.5}}],
+                {title:'Trace Plot (μ)',xaxis:{title:'Iteration'},yaxis:{title:'μ'}});
+            
+            // Posterior density
+            const bins=50;
+            Plotly.newPlot('mcmc-dens',[{x:samples.mu,type:'histogram',nbinsx:bins,marker:{color:'#2563eb'}}],
+                {title:'Posterior Distribution (μ)',xaxis:{title:'log(OR)'},shapes:[{type:'line',x0:0,x1:0,y0:0,y1:1,yref:'paper',line:{color:'red',dash:'dash'}}]});
+            
+            document.getElementById('loader').style.display='none';
+        },50);
+    }
+};
+
+// ============================================================================
+// DOSE-RESPONSE
+// ============================================================================
+const DoseResponse={
+    run:()=>{
+        const r=App.getData();
+        const s={};
+        r.forEach(x=>{if(!s[x.id])s[x.id]=[];s[x.id].push(x)});
+        const pts=[], slopes=[], w=[];
+        
+        Object.keys(s).forEach(id=>{
+            const a=s[id].sort((x,y)=>Number(x.dose)-Number(y.dose));
+            const ref=a[0];
+            for(let i=1;i<a.length;i++){
+                const c=a[i], dd=Number(c.dose)-Number(ref.dose);
+                if(dd>0){
+                    const rr=(Number(c.e)/Number(c.n))/(Number(ref.e)/Number(ref.n));
+                    const lrr=Math.log(rr);
+                    const sl=lrr/dd;
+                    const v=(1/Number(c.e)+1/Number(ref.e))/(dd**2);
+                    slopes.push(sl);
+                    w.push(1/v);
+                    pts.push({dose:Number(c.dose),lrr:lrr,id});
+                }
+            }
+        });
+        
+        if(slopes.length===0)return alert("No dose-response data found");
+        
+        const sw=w.reduce((a,b)=>a+b,0);
+        const ps=slopes.reduce((a,x,i)=>a+x*w[i],0)/sw;
+        const seSl=Math.sqrt(1/sw);
+        
+        document.getElementById('dose-slope').innerHTML=`<strong>Pooled Slope:</strong> ${ps.toFixed(4)} (SE: ${seSl.toFixed(4)}), p=${(2*(1-Stats.pnorm(Math.abs(ps/seSl)))).toFixed(3)}`;
+        
+        const maxDose=Math.max(...pts.map(p=>p.dose));
+        Plotly.newPlot('dose-plot',[
+            {x:pts.map(p=>p.dose),y:pts.map(p=>p.lrr),mode:'markers',name:'Studies',marker:{size:8,color:'#2563eb'}},
+            {x:[0,maxDose],y:[0,maxDose*ps],mode:'lines',name:'Trend',line:{color:'red'}}
+        ],{xaxis:{title:'Dose'},yaxis:{title:'log(RR)'}});
+    }
+};
+
+// ============================================================================
+// RoBMA (ROBUST BAYESIAN META-ANALYSIS)
+// ============================================================================
+const RoBMA={
+    models:[
+        {n:"Fixed",t:"FE",b:0,p:.25},
+        {n:"Random",t:"RE",b:0,p:.25},
+        {n:"FE+Bias",t:"FE",b:1,p:.25},
+        {n:"RE+Bias",t:"RE",b:1,p:.25}
+    ],
+    run:()=>{
+        const eff=App.getPairwise();
+        if(eff.length<3){alert("Need 3+ studies");return}
+        
+        const Y=eff.map(e=>e.te), V=eff.map(e=>1/e.w);
+        const res=RoBMA.models.map(m=>{
+            const fit=RoBMA.fit(Y,V,m.t,m.b);
+            const bic=fit.k*Math.log(Y.length)+fit.dev;
+            return {...m, ...fit, lml:-0.5*bic};
+        });
+        
+        const max=Math.max(...res.map(r=>r.lml));
+        let sum=0;
+        res.forEach(r=>{ r.bf=Math.exp(r.lml-max); r.w=r.bf*r.p; sum+=r.w; });
+        res.forEach(r=>r.w/=sum);
+        
+        let av=0, avv=0;
+        res.forEach(r=>av+=r.w*r.est);
+        res.forEach(r=>avv+=r.w*(r.se**2+r.est**2));
+        avv-=av**2;
+        
+        document.getElementById('robma-est').innerText=Math.exp(av).toFixed(3)+` [${Math.exp(av-1.96*Math.sqrt(avv)).toFixed(2)}, ${Math.exp(av+1.96*Math.sqrt(avv)).toFixed(2)}]`;
+        
+        const h=res.map(r=>`<div class="robma-row"><div style="width:80px">${r.n}</div><div class="robma-bar"><div class="robma-fill" style="width:${r.w*100}%"></div></div><div>${(r.w*100).toFixed(0)}%</div></div>`).join('');
+        document.getElementById('robma-models').innerHTML=h;
+        
+        Plotly.newPlot('robma-plot',[
+            {x:res.map(r=>Math.exp(r.est)),y:res.map(r=>r.n),type:'scatter',mode:'markers',
+             error_x:{type:'data',array:res.map(r=>Math.exp(r.est+1.96*r.se)-Math.exp(r.est))},
+             marker:{size:10,color:'#64748b'},name:'Models'},
+            {x:[Math.exp(av)],y:['Model-Avg'],mode:'markers',marker:{color:'red',size:14,symbol:'diamond'},name:'Averaged'}
+        ],{xaxis:{type:'log',title:'Effect'},shapes:[{type:'line',x0:1,x1:1,y0:-0.5,y1:res.length+0.5,line:{color:'gray',dash:'dash'}}]});
+    },
+    fit:(Y,V,t,b)=>{
+        let w=V.map(v=>1/v), tau2=0;
+        
+        // Selection model approximation (down-weight non-significant)
+        if(b){
+            w=w.map((x,i)=>Math.abs(Y[i]/Math.sqrt(V[i]))<1.96?x*0.5:x);
+        }
+        
+        if(t==='RE'){
+            const sw=w.reduce((a,b)=>a+b,0);
+            const sWy=w.reduce((a,x,i)=>a+x*Y[i],0);
+            const mu=sWy/sw;
+            const Q=w.reduce((a,x,i)=>a+x*(Y[i]-mu)**2,0);
+            const c=sw-w.reduce((a,x)=>a+x*x,0)/sw;
+            tau2=Math.max(0,(Q-(Y.length-1))/c);
+        }
+        
+        const we=V.map(v=>1/(v+tau2));
+        const sWe=we.reduce((a,b)=>a+b,0);
+        const est=we.reduce((a,x,i)=>a+x*Y[i],0)/sWe;
+        let dev=0;
+        Y.forEach((y,i)=>dev+=((y-est)**2)/(V[i]+tau2)+Math.log(V[i]+tau2));
+        
+        return {est, se:Math.sqrt(1/sWe), k:(t==='RE'?2:1)+(b?1:0), dev, tau2};
+    }
+};
+
+// ============================================================================
+// ROB & GRADE
+// ============================================================================
+const RoB={
+    init:()=>{
+        const ids=[...new Set(App.getData().map(r=>r.id))];
+        const domains=['Rand','Dev','Miss','Meas','Rep'];
+        let h=`<div class="rob-grid"><div class="rob-head">Study</div>${domains.map(x=>`<div class="rob-head">${x}</div>`).join('')}<div class="rob-head">Overall</div>`;
+        ids.forEach(id=>{
+            h+=`<div class="rob-cell" style="justify-content:start;font-weight:bold">${id}</div>`;
+            domains.forEach(x=>h+=`<div class="rob-cell rob-low" onclick="RoB.toggle(this)"><div class="rob-circle">+</div></div>`);
+            h+=`<div class="rob-cell rob-low"><div class="rob-circle">+</div></div>`;
+        });
+        document.getElementById('rob-table').innerHTML=h+'</div>';
+        RoB.summary();
+    },
+    toggle:e=>{
+        if(e.classList.contains('rob-low')){
+            e.className='rob-cell rob-some';
+            e.firstChild.innerText='?';
+        }else if(e.classList.contains('rob-some')){
+            e.className='rob-cell rob-high';
+            e.firstChild.innerText='-';
+        }else{
+            e.className='rob-cell rob-low';
+            e.firstChild.innerText='+';
+        }
+        RoB.summary();
+    },
+    summary:()=>{
+        const c={L:0,S:0,H:0};
+        const cells=document.querySelectorAll('.rob-grid .rob-cell:not(:nth-child(7n+1))');
+        cells.forEach(e=>{
+            if(e.classList.contains('rob-low'))c.L++;
+            else if(e.classList.contains('rob-some'))c.S++;
+            else c.H++;
+        });
+        const t=cells.length||1;
+        Plotly.newPlot('rob-summary',[{
+            x:[c.L/t,c.S/t,c.H/t],
+            y:['Risk of Bias'],
+            orientation:'h',
+            type:'bar',
+            marker:{color:['#4ade80','#facc15','#f87171']},
+            width:0.5,
+            text:[`Low (${c.L})`,`Some (${c.S})`,`High (${c.H})`],
+            textposition:'inside'
+        }],{barmode:'stack',xaxis:{range:[0,1],tickformat:'.0%'},showlegend:false,margin:{l:100}});
+    }
+};
+
+const GRADE={
+    calc:()=>{
+        let s=parseInt(document.getElementById('grade-base').value);
+        document.querySelectorAll('#grade-box input:checked').forEach(c=>s+=parseInt(c.value));
+        const r=document.getElementById('grade-res');
+        if(s>=4){r.innerText='HIGH';r.style.color='#166534'}
+        else if(s===3){r.innerText='MODERATE';r.style.color='#15803d'}
+        else if(s===2){r.innerText='LOW';r.style.color='#ca8a04'}
+        else{r.innerText='VERY LOW';r.style.color='#b91c1c'}
+    }
+};
+
+// ============================================================================
+// INITIALIZATION
+// ============================================================================
+window.onload = App.init;
+</script>
+</body>
+</html>

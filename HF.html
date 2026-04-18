@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MetaFlow-HF | Master Evidence Engine v9.2 (Fixed)</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <!-- MathJS is crucial for the fixed Gamma/Stats functions -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.3.0/math.min.js"></script>
+
+    <style>
+        body { background-color: #0f172a; color: #cbd5e1; font-family: 'Inter', system-ui, sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem; border: 1px solid #334155; }
+        .mono-box { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+        
+        /* Loader */
+        .loader { border: 2px solid rgba(255,255,255,0.1); border-top: 2px solid #ffffff; border-radius: 50%; width: 14px; height: 14px; animation: spin 0.8s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Tab Active State */
+        .tab-active { border-bottom: 2px solid #a855f7; color: #a855f7; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        
+        /* Tooltips & Highlights */
+        div.vis-tooltip { background-color: #1e293b; color: white; border: 1px solid #475569; padding: 4px; border-radius: 4px; font-family: 'Inter'; box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.5); z-index: 100; font-size: 10px; }
+        .transport-item-active { border-color: #10b981 !important; background-color: rgba(16, 185, 129, 0.2) !important; transform: scale(1.02); box-shadow: 0 0 15px rgba(16, 185, 129, 0.3); }
+        #trial-detail-card { transition: opacity 0.2s ease, transform 0.2s ease; z-index: 50; }
+
+        /* Legend Chips */
+        .legend-chip { cursor: pointer; padding: 2px 6px; border-radius: 9999px; border-width: 1px; border-style: solid; border-color: transparent; font-size: 10px; transition: all 0.2s; background-color: rgba(15, 23, 42, 0.7); }
+        .legend-chip:hover { background-color: rgba(255,255,255,0.1); }
+        .legend-chip-muted { opacity: 0.35; border-color: rgba(148, 163, 184, 0.7); text-decoration: line-through; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- HEADER -->
+    <nav class="h-14 border-b border-slate-700 flex items-center px-6 justify-between bg-slate-900 shrink-0 z-20">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-br from-purple-600 to-blue-600 w-8 h-8 rounded flex items-center justify-center text-white font-bold text-xs shadow-lg">MF</div>
+            <div>
+                <span class="font-bold text-lg tracking-tight text-white block leading-tight">MetaFlow<span class="text-purple-400">-HF</span></span>
+                <span class="text-[10px] text-slate-500 uppercase tracking-wider block leading-tight">v9.2: Validated Engine</span>
+            </div>
+        </div>
+        <div class="flex gap-4 text-xs font-mono text-slate-400 items-center">
+            <div id="trial-counter" class="bg-slate-800 px-3 py-1 rounded-full border border-slate-700 transition-all hover:border-purple-500 cursor-default">0 / 0 Trials</div>
+            <button onclick="if(window.ExportEngine) window.ExportEngine.downloadCSV()" class="hover:text-white transition flex items-center gap-2"><i class="fa-solid fa-file-csv"></i> Export</button>
+        </div>
+    </nav>
+
+    <!-- MAIN LAYOUT -->
+    <div class="flex flex-1 min-h-0 relative">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-72 border-r border-slate-700 flex flex-col bg-slate-900/95 backdrop-blur z-10">
+            <!-- Pipeline Controls -->
+            <div class="p-4 border-b border-slate-700">
+                <label class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2 block">Data Pipeline</label>
+                <button id="btn-fetch" onclick="if(window.App && window.App.runPipeline) window.App.runPipeline()" class="w-full bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white py-2 rounded shadow-lg text-xs font-bold transition flex items-center justify-center gap-2" tabindex="1">
+                    <i class="fa-solid fa-database"></i> <span>Fetch Universe (Live)</span>
+                </button>
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                    <button onclick="if(window.App && window.App.injectRegistry) window.App.injectRegistry()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1 rounded text-[10px] border border-slate-600 transition" tabindex="2">
+                        <i class="fa-solid fa-upload"></i> Registry CSV
+                    </button>
+                    <button onclick="if(window.App && window.App.injectDemo) window.App.injectDemo()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1 rounded text-[10px] border border-slate-600 transition" tabindex="3">
+                        <i class="fa-solid fa-play"></i> Load Demo
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats & Logs -->
+            <div class="flex-1 flex flex-col min-h-0 bg-black/20">
+                <div class="p-2 border-b border-slate-800 flex justify-between bg-slate-900/50">
+                    <span class="text-[10px] font-bold text-slate-500 pl-2">EVENT LOG</span>
+                    <button onclick="window.Logger.clear()" class="text-[9px] text-slate-600 hover:text-slate-400 pr-2">CLR</button>
+                </div>
+                <div id="console-output" class="flex-1 p-3 font-mono text-[10px] text-slate-300 overflow-y-auto space-y-1"></div>
+            </div>
+        </aside>
+
+        <!-- DASHBOARD CONTENT -->
+        <main class="flex-1 flex flex-col min-w-0 bg-slate-900 relative">
+            
+            <!-- TABS -->
+            <div class="h-10 border-b border-slate-700 flex px-4 bg-slate-800/50 gap-4">
+                <button onclick="window.UI.setTab('core')" class="tab-btn tab-active h-full px-2 text-xs font-bold flex items-center gap-2 border-b-2 border-transparent transition" data-tab="core" tabindex="4">
+                    <i class="fa-solid fa-share-nodes"></i> NMA & CNMA
+                </button>
+                <button onclick="window.UI.setTab('geometry')" class="tab-btn h-full px-2 text-xs font-bold text-slate-400 hover:text-white flex items-center gap-2 border-b-2 border-transparent transition" data-tab="geometry" tabindex="5">
+                    <i class="fa-solid fa-globe"></i> HF Geometry
+                </button>
+                <button onclick="window.UI.setTab('world')" class="tab-btn h-full px-2 text-xs font-bold text-slate-400 hover:text-white flex items-center gap-2 border-b-2 border-transparent transition" data-tab="world" tabindex="6">
+                    <i class="fa-solid fa-city"></i> World & HTA
+                </button>
+                <button onclick="window.UI.setTab('experimental')" class="tab-btn h-full px-2 text-xs font-bold text-slate-400 hover:text-white flex items-center gap-2 border-b-2 border-transparent transition" data-tab="experimental" tabindex="7">
+                    <i class="fa-solid fa-flask"></i> Experimental
+                </button>
+            </div>
+
+            <!-- VIEW: CORE NMA -->
+            <div id="view-core" class="view-panel flex-1 p-6 overflow-y-auto grid grid-cols-12 gap-6">
+                <!-- Toolbar -->
+                <div class="col-span-12 flex justify-between items-center bg-slate-800/50 p-2 rounded border border-slate-700">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-400 px-2">OUTCOME:</span>
+                        <select id="outcome-select" onchange="if(window.App) window.App.updateUI()" class="bg-slate-900 text-xs text-white border border-slate-600 rounded px-2 py-1 outline-none" tabindex="8">
+                            <option value="mortality">All-Cause / CV Mortality</option>
+                            <option value="hfhosp">HF Hospitalization</option>
+                            <option value="composite">Primary Composite</option>
+                        </select>
+                    </div>
+                    <!-- GDMT Toggle -->
+                    <label class="flex items-center gap-1 text-[10px] text-slate-400 cursor-pointer">
+                        <input id="core-only-toggle" type="checkbox" class="rounded border-slate-600 bg-slate-900 text-emerald-500" onchange="if(window.App) window.App.toggleCoreOnly(this.checked)" tabindex="9">
+                        <span>GDMT Core only</span>
+                    </label>
+                </div>
+
+                <!-- Network Graph -->
+                <div class="col-span-8 glass-panel h-96 relative">
+                    <div id="network-container" class="w-full h-full"></div>
+                    <div class="absolute top-2 left-2 text-[10px] font-bold text-slate-500 bg-slate-900/80 px-2 py-1 rounded">EVIDENCE UNIVERSE</div>
+                </div>
+                <!-- Forest Plot -->
+                <div class="col-span-4 glass-panel h-96 flex flex-col">
+                    <!-- Header -->
+                    <div class="p-3 border-b border-slate-700 text-xs font-bold text-slate-400 flex justify-between">
+                        <span>COMPONENT EFFECTS (Analytic)</span>
+                        <span id="tau-display" class="text-purple-400 font-mono text-[10px]">τ²: --</span>
+                    </div>
+                    <!-- View toggle + legend -->
+                    <div class="px-3 py-1 border-b border-slate-800 flex items-center justify-between gap-2 text-[10px]">
+                        <div class="flex items-center gap-1">
+                            <span class="text-slate-500">View:</span>
+                            <select id="forest-mode" onchange="if(window.App) window.App.renderForestPlot()" class="bg-slate-900 text-[10px] text-white border border-slate-600 rounded px-1 py-0.5 outline-none" tabindex="10">
+                                <option value="components">By component</option>
+                                <option value="macro">GDMT core vs adjuncts</option>
+                            </select>
+                        </div>
+                        <div id="component-legend" class="flex-1 text-right text-[9px] text-slate-400 overflow-hidden whitespace-nowrap">
+                            <!-- Filled by JS -->
+                        </div>
+                    </div>
+                    <!-- Forest plot canvas -->
+                    <div id="forest-plot" class="flex-1 w-full"></div>
+                </div>
+                <!-- Bias Diagnostics -->
+                <div class="col-span-6 glass-panel p-4 h-64 flex flex-col">
+                    <div class="text-xs font-bold text-slate-400 mb-2 flex justify-between">
+                        <span>PUBLICATION BIAS (Egger's Test)</span>
+                        <span id="egger-p" class="font-mono text-xs">P: --</span>
+                    </div>
+                    <div id="funnel-plot" class="w-full flex-1"></div>
+                </div>
+                <!-- Interaction Matrix -->
+                <div class="col-span-6 glass-panel p-4 h-64 flex flex-col">
+                    <div class="text-xs font-bold text-slate-400 mb-2">INTERACTION CHECK (Pythagorean Q)</div>
+                    <div id="interaction-matrix" class="w-full flex-1 flex flex-col items-center justify-center text-xs text-slate-500">
+                        <div id="interaction-status">Waiting for data...</div>
+                    </div>
+                </div>
+                
+                <!-- BAYESIAN LEAGUE TABLE -->
+                <div class="col-span-12 glass-panel p-4">
+                    <div class="text-xs font-bold text-slate-400 mb-2 flex justify-between">
+                        <span>BAYESIAN LEAGUE TABLE (Prob. Row > Col) & SUCRA</span>
+                        <span class="text-[10px] text-slate-500" id="league-summary">Waiting for CNMA...</span>
+                    </div>
+                    <div id="league-table" class="w-full overflow-x-auto text-[10px] text-slate-300"></div>
+                </div>
+            </div>
+
+            <!-- VIEW: GEOMETRY -->
+            <div id="view-geometry" class="view-panel hidden flex-1 p-6 overflow-y-auto grid grid-cols-12 gap-6">
+                <div class="col-span-8 glass-panel h-[500px] relative group">
+                    <div id="geometry-plot" class="w-full h-full"></div>
+                    <div class="absolute top-2 left-2 text-[10px] font-bold text-slate-500 bg-slate-900/80 px-2 py-1 rounded">HF ELEMENT SPACE (Universe)</div>
+                    
+                    <!-- Detail Card -->
+                    <div id="trial-detail-card" class="absolute top-4 right-4 w-48 glass p-3 rounded-lg border border-slate-500/50 shadow-2xl opacity-0 pointer-events-none transform translate-y-2">
+                        <button onclick="if(window.App) window.App.hideCard()" class="absolute top-1 right-2 text-slate-400 hover:text-white text-xs" tabindex="0">&times;</button>
+                        <div class="flex justify-between items-start mb-2 border-b border-slate-600 pb-1 pr-2">
+                            <span id="card-id" class="text-[10px] text-slate-400 font-mono">--</span>
+                            <span id="card-n" class="text-[10px] bg-slate-700 px-1.5 rounded text-white">N=--</span>
+                        </div>
+                        <div id="card-title" class="text-xs font-bold text-white mb-2 leading-tight">--</div>
+                        <div class="space-y-1">
+                            <div class="flex justify-between text-[10px]"><span class="text-slate-400">Class</span><span id="card-class" class="text-emerald-400 font-bold">--</span></div>
+                            <div class="flex justify-between text-[10px]"><span class="text-slate-400">Effect</span><span id="card-hr" class="text-white font-mono">--</span></div>
+                            <div class="flex justify-between text-[10px]"><span class="text-slate-400">Age / EF</span><span id="card-demo" class="text-slate-300">-- / --</span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-span-4 glass-panel p-4 space-y-4 flex flex-col h-[500px]">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-bold text-slate-300">TRANSPORTABILITY</h3>
+                        <select id="target-profile-select" onchange="if(window.App) window.App.updateGeometry()" class="bg-slate-800 text-[10px] text-white border border-slate-600 rounded px-1 py-0.5 outline-none" tabindex="11">
+                            <option value="standard">Standard HFrEF</option>
+                            <option value="frail">Frail Elderly</option>
+                            <option value="young">Young / De Novo</option>
+                        </select>
+                    </div>
+                    
+                    <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
+                        <div class="text-[10px] text-slate-500 uppercase mb-2">Target Profile</div>
+                        <div class="flex justify-between text-xs text-white mb-1"><span>Age</span><span id="target-age-disp">--</span></div>
+                        <div class="flex justify-between text-xs text-white mb-1"><span>LVEF</span><span id="target-ef-disp">--</span></div>
+                        <div class="flex justify-between text-xs text-white"><span>Year</span><span>2025</span></div>
+                    </div>
+                    
+                    <div class="text-[10px] font-bold text-slate-500 uppercase mt-2">Distance (Weighted L1)</div>
+                    <div id="transport-list" class="space-y-2 text-[10px] overflow-y-auto flex-1 pr-2"></div>
+                </div>
+            </div>
+
+            <!-- VIEW: WORLD -->
+            <div id="view-world" class="view-panel hidden flex-1 p-6 overflow-y-auto flex flex-col gap-6">
+                <div class="glass-panel p-4 flex justify-between items-center">
+                    <div class="flex gap-4 items-center">
+                        <span class="text-xs font-bold text-slate-400">POLICY STRATEGY:</span>
+                        <select id="policy-select" class="bg-slate-800 text-xs text-white border border-slate-600 rounded px-2 py-1" tabindex="12">
+                            <option value="sq">Status Quo (No Additional Tx)</option>
+                            <option value="gdmt">Universal GDMT (SGLT2i)</option>
+                            <option value="max">Max Intensity (ARNi + SGLT2i)</option>
+                        </select>
+                    </div>
+                    <button onclick="if(window.App) window.App.runSimulation()" class="bg-emerald-600 hover:bg-emerald-500 text-white px-4 py-1 rounded text-xs font-bold shadow flex items-center gap-2" tabindex="13">
+                        <i class="fa-solid fa-play"></i> <span>Run 10-Year HTA Simulation</span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-12 gap-6 flex-1">
+                    <!-- Outcomes -->
+                    <div class="col-span-8 glass-panel p-4">
+                        <div class="text-xs font-bold text-slate-400 mb-2 flex justify-between">
+                            <span>CLINICAL OUTCOMES (State Transition Model)</span>
+                            <span class="text-emerald-400" id="sim-qaly-total">Total QALYs: --</span>
+                        </div>
+                        <div id="sim-plot-states" class="w-full h-72"></div>
+                    </div>
+                    <!-- Economics -->
+                    <div class="col-span-4 glass-panel p-4 flex flex-col">
+                        <div class="text-xs font-bold text-slate-400 mb-2">COST ACCUMULATION</div>
+                        <div id="sim-plot-cost" class="w-full flex-1"></div>
+                        <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] font-mono text-center" id="icer-display">
+                            ICER: --
+                        </div>
+                    </div>
+                    <!-- Details -->
+                    <div class="col-span-12 glass-panel p-4">
+                        <div class="text-xs font-bold text-slate-400 mb-2">POPULATION IMPACT</div>
+                        <div class="text-[10px] text-slate-500 font-mono" id="sim-details">
+                            Select a policy and run simulation to see cohort-level breakdown.
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW: EXPERIMENTAL -->
+            <div id="view-experimental" class="view-panel hidden flex-1 p-6 overflow-y-auto grid grid-cols-2 gap-6">
+                <div class="glass-panel p-4">
+                    <div class="text-xs font-bold text-slate-400 mb-2 flex justify-between">
+                        <span>TOPOLOGY: PERSISTENT CLUSTERING (Barcodes)</span>
+                        <button onclick="if(window.App) window.App.renderExperimental()" class="text-[9px] text-blue-400 hover:text-white" tabindex="14"><i class="fa-solid fa-rotate"></i> Recalc</button>
+                    </div>
+                    <div id="barcode-plot" class="w-full h-80"></div>
+                </div>
+                <div class="glass-panel p-4">
+                    <div class="text-xs font-bold text-slate-400 mb-2">MULTIVERSE SPECIFICATION CURVE (Robustness)</div>
+                    <div id="spec-curve" class="w-full h-80"></div>
+                </div>
+                <!-- Heatmap Container Added -->
+                <div class="glass-panel p-4 col-span-2">
+                     <div class="text-xs font-bold text-slate-400 mb-2">TRANSITIVITY HEATMAP (Gower's Dist)</div>
+                     <div id="transitivity-heatmap" class="w-full h-80"></div>
+                </div>
+            </div>
+
+        </main>
+    </div>
+
+    <!-- LOGIC -->
+    <script>
+        // Use window.math from CDN (Ensures availability before Utils usage)
+        const math = window.math;
+
+        // --- 1. UTILS & LOGGING ---
+        window.Logger = {
+            log: (msg, type='info') => {
+                const el = document.getElementById('console-output');
+                if(!el) return;
+                const time = new Date().toLocaleTimeString().split(' ')[0];
+                const color = type==='error'?'text-red-400':(type==='success'?'text-emerald-400':'text-slate-400');
+                el.innerHTML += `<div class="mb-1 border-b border-slate-800/50 pb-1"><span class="opacity-40 font-mono mr-2">[${time}]</span><span class="${color}">${msg}</span></div>`;
+                el.scrollTop = el.scrollHeight;
+            },
+            clear: () => {
+                const el = document.getElementById('console-output');
+                if(el) el.innerHTML = '';
+            }
+        };
+
+        // --- GLOBAL INIT (UI) ---
+        window.UI = {
+            setTab: (tab) => {
+                document.querySelectorAll('.view-panel').forEach(e => e.classList.add('hidden'));
+                document.getElementById(`view-${tab}`).classList.remove('hidden');
+                document.querySelectorAll('.tab-btn').forEach(e => e.classList.remove('tab-active', 'text-white'));
+                document.querySelector(`[data-tab="${tab}"]`).classList.add('tab-active', 'text-white');
+                window.dispatchEvent(new Event('resize'));
+            }
+        };
+
+        window.Utils = {
+            // SAFE Math Helpers
+            mean: (arr) => {
+                if (!Array.isArray(arr) || arr.length === 0) return 0;
+                return arr.reduce((a, b) => a + b, 0) / arr.length;
+            },
+            sum: (arr) => {
+                if (!Array.isArray(arr) || arr.length === 0) return 0;
+                return arr.reduce((a, b) => a + b, 0);
+            },
+            variance: (arr) => {
+                if (!Array.isArray(arr) || arr.length < 2) return 0;
+                const m = window.Utils.mean(arr);
+                return window.Utils.mean(arr.map(x => (x - m) ** 2));
+            },
+            
+            // Robust Log-Normal SE calculation (3.92 = 2 * 1.96 for 95% CI)
+            ciToSe: (lower, upper) => {
+                if (lower <= 0 || upper <= 0 || lower >= upper) return 0.5; 
+                return (Math.log(upper) - Math.log(lower)) / 3.92;
+            },
+            
+            // --- FIXED STATISTICAL FUNCTIONS ---
+            // Replaced buggy recursive Gamma with mathjs implementation
+            gamma: (z) => {
+                if(window.math && window.math.gamma) {
+                    return window.math.gamma(z);
+                }
+                // Backup Lanczos approximation if mathjs fails (unlikely)
+                const g = 7;
+                const C = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+                if (z < 0.5) return Math.PI / (Math.sin(Math.PI * z) * window.Utils.gamma(1 - z));
+                z -= 1;
+                let x = C[0];
+                for (let i = 1; i < C.length; i++) x += C[i] / (z + i);
+                const t = z + g + 0.5;
+                return Math.sqrt(2 * Math.PI) * Math.pow(t, z + 0.5) * Math.exp(-t) * x;
+            },
+            
+            // Incomplete Beta Function (Regularized)
+            ibeta: (x, a, b) => {
+                if (x <= 0) return 0;
+                if (x >= 1) return 1;
+                // Precompute log of beta function factor to avoid overflow
+                const lbeta = (aa, bb) => Math.log(window.Utils.gamma(aa)) + Math.log(window.Utils.gamma(bb)) - Math.log(window.Utils.gamma(aa + bb));
+                const factor = Math.exp(a * Math.log(x) + b * Math.log(1 - x) - lbeta(a, b));
+                
+                if (x < (a + 1) / (a + b + 2)) {
+                    return factor * window.Utils.betacf(x, a, b) / a;
+                } else {
+                    return 1 - factor * window.Utils.betacf(1 - x, b, a) / b;
+                }
+            },
+            
+            // Continued Fraction for Incomplete Beta
+            betacf: (x, a, b) => {
+                const maxIt = 100; 
+                const epsilon = 1e-8;
+                let qab = a + b; 
+                let qap = a + 1; 
+                let qam = a - 1;
+                let c = 1; 
+                let d = 1 - qab * x / qap;
+                if (Math.abs(d) < 1e-100) d = 1e-100;
+                d = 1 / d;
+                let h = d;
+                
+                for (let m = 1; m <= maxIt; m++) {
+                    const m2 = 2 * m;
+                    let aa = m * (b - m) * x / ((qam + m2) * (a + m2));
+                    d = 1 + aa * d; 
+                    if (Math.abs(d) < 1e-100) d = 1e-100;
+                    c = 1 + aa / c; 
+                    if (Math.abs(c) < 1e-100) c = 1e-100;
+                    d = 1 / d; 
+                    h *= d * c;
+                    
+                    aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2));
+                    d = 1 + aa * d; 
+                    if (Math.abs(d) < 1e-100) d = 1e-100;
+                    c = 1 + aa / c; 
+                    if (Math.abs(c) < 1e-100) c = 1e-100;
+                    d = 1 / d;
+                    
+                    const del = d * c; 
+                    h *= del;
+                    if (Math.abs(del - 1.0) < epsilon) break;
+                }
+                return h;
+            },
+
+            // T-Distribution P-Value (Two-tailed usually calculated as 2 * (1 - CDF))
+            // Here returning CDF for 1-tailed or similar, logic adapted for p-value usage
+            pValueT: (t, df) => {
+                const x = df / (df + t * t);
+                // Ensure x is in range for ibeta
+                const val = Math.max(0, Math.min(1, x));
+                return window.Utils.ibeta(val, df / 2, 0.5);
+            },
+
+            lowRegGamma: (s, x) => {
+                let sum = 1 / s;
+                let term = 1 / s;
+                for(let i = 1; i < 100; i++) {
+                    term *= x / (s + i);
+                    sum += term;
+                    if(term < 1e-9) break;
+                }
+                return Math.pow(x, s) * Math.exp(-x) * sum / window.Utils.gamma(s);
+            },
+
+            pValueChiSq: (q, df) => {
+                if(q <= 0 || df <= 0) return 1.0;
+                return 1 - window.Utils.lowRegGamma(df/2, q/2);
+            },
+
+            randn: () => {
+                let u = 0, v = 0;
+                while (u === 0) u = Math.random();
+                while (v === 0) v = Math.random();
+                return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+            }
+        };
+
+        // --- 2. DATA LAYER ---
+        window.CtgovClient = class CtgovClient {
+            constructor() {
+                // Specific query for HFrEF reduced ejection fraction
+                this.query = "?query.term=heart%20failure%20reduced%20ejection%20fraction&filter.overallStatus=COMPLETED&pageSize=100";
+            }
+            async fetchBatch(token=null) {
+                let url = "https://clinicaltrials.gov/api/v2/studies" + this.query;
+                if(token) url += `&pageToken=${token}`;
+                const res = await fetch(url);
+                if(!res.ok) throw new Error("API Error " + res.status);
+                return await res.json();
+            }
+        };
+
+        const PRETTY_NAMES = {
+            'NCT01920711': 'PARADIGM-HF', 'NCT03036124': 'DAPA-HF', 'NCT01644394': 'EMPEROR-Red',
+            'NCT01805289': 'VICTORIA', 'NCT02588656': 'PIONEER-HF', 'NCT00094302': 'TOPCAT',
+            'NCT02929329': 'GALACTIC-HF', 'NCT03619213': 'DELIVER', 'NCT01035255': 'EMPHASIS-HF',
+            'NCT00045032': 'HERCEPTIN', 'NCT01109092': 'CONFIRM-HF', 'NCT02193772': 'COMMANDER-HF'
+        };
+
+        window.TrialParser = class TrialParser {
+            classifyComponent(text) {
+                const t = (text || '').toLowerCase();
+                const hasAny = (...patterns) => patterns.some(p => t.includes(p));
+
+                if (hasAny('sglt2', 'dapagliflozin', 'dapa-hf', 'dapa hf', 'empagliflozin', 'emperor-reduced', 'emperor reduced', 'emperor-red', 'canagliflozin', 'ertugliflozin', 'sotagliflozin')) return 'SGLT2i';
+                if (hasAny('sacubitril', 'lcz696', 'valsartan/sacubitril', 'neprilysin', 'angiotensin receptor neprilysin', 'entresto', 'arni')) return 'ARNi';
+                if (hasAny('vericiguat', 'soluble guanylate cyclase')) return 'sGC';
+                if (hasAny('omecamtiv', 'myosin activator')) return 'Myosin';
+                
+                if (hasAny('ace inhibitor', 'enalapril', 'lisinopril', 'ramipril', 'captopril', 'perindopril', 'trandolapril', 'angiotensin receptor blocker', 'valsartan', 'losartan', 'candesartan', 'irbesartan', 'telmisartan', 'olmesartan')) return 'ACEi/ARB';
+                if (/\barb\b/.test(t)) return 'ACEi/ARB'; 
+                if (hasAny('spironolactone', 'eplerenone', 'finerenone', 'mineralocorticoid receptor antagonist', 'mra ')) return 'MRA';
+                
+                if (hasAny('beta blocker', 'β-blocker', 'b-blocker', 'bisoprolol', 'carvedilol', 'metoprolol', 'nebivolol', 'atenolol')) return 'Beta-blocker';
+                
+                if (hasAny('ivabradine', 'sinus node inhibitor')) return 'HR Modulator';
+                if (hasAny('loop diuretic', 'furosemide', 'torsemide', 'bumetanide')) return 'Diuretic';
+                if (hasAny('cardiac resynchronization', 'crt-d', 'crt d', 'crt-p', 'crt p', 'implantable cardioverter defibrillator', 'icd', 'left ventricular assist device', 'lvad', 'ventricular assist device', 'biventricular pacing')) return 'Device';
+                if (hasAny('exercise training', 'cardiac rehabilitation', 'cardiac rehab', 'rehabilitation', 'dietary', 'nutrition', 'telemonitoring', 'telemonitor', 'remote monitoring', 'self-care', 'self care', 'education program')) return 'Non-drug';
+                if (hasAny('digoxin', 'digitalis', 'dobutamine', 'milrinone')) return 'Other HF drug';
+
+                return 'Other';
+            }
+
+            parse(study) {
+                try {
+                    const p = study.protocolSection;
+                    const r = study.resultsSection;
+                    if(!p) return null; 
+                    
+                    const id = p.identificationModule.nctId;
+                    const title = p.identificationModule.briefTitle;
+                    const n = parseInt(p.designModule?.enrollmentInfo?.count || 0);
+                    
+                    const titleText = (title + " " + (p.identificationModule.officialTitle || "")).toLowerCase();
+                    const condText = (p.conditionsModule?.conditions || []).join(' ').toLowerCase();
+                    const fullText = titleText + " " + condText;
+                    
+                    if (fullText.includes("preserved ejection") || fullText.includes("hfpef") || fullText.includes("diastolic heart failure")) {
+                        return null; // Skip HFpEF
+                    }
+                    if (!fullText.includes("heart failure") && !fullText.includes("ventricular dysfunction")) {
+                        return null; // Skip non-HF
+                    }
+
+                    let year = 2015;
+                    if (p.statusModule?.startDateStruct?.date) year = parseInt(p.statusModule.startDateStruct.date.split('-')[0]);
+
+                    const armsText = (p.armsInterventionsModule?.arms || []).map(a => `${a.name || ''} ${a.description || ''}`).join(' ');
+                    const interventionsText = (p.armsInterventionsModule?.interventions || []).map(i => `${i.name || ''} ${i.description || ''}`).join(' ');
+                    const classificationText = `${title} ${armsText} ${interventionsText}`.trim();
+
+                    let age = 65, sex = 0.3, ef = 30;
+                    const outcomes = [];
+
+                    if (r) {
+                        const measures = r.baselineCharacteristicsModule?.measures || [];
+                        measures.forEach(m => {
+                            const t = (m.title||"").toLowerCase();
+                            if(t.includes('age') && m.paramType==='MEAN') {
+                                const val = parseFloat(m.classes?.[0]?.categories?.[0]?.measurements?.[0]?.value);
+                                const unit = (m.unitOfMeasure || "").toLowerCase();
+                                if (!isNaN(val) && val > 18 && !unit.includes('month') && !unit.includes('week')) {
+                                    age = val; 
+                                }
+                            }
+                        });
+
+                        (r.outcomeMeasuresModule?.outcomeMeasures || []).forEach(m => {
+                            const t = (m.title||"").toLowerCase();
+                            
+                            let priority = 2; 
+                            if (m.type === 'PRIMARY') priority = 0;
+                            else if (m.type === 'SECONDARY') priority = 1;
+
+                            let type = 'other';
+                            if(t.includes('death') || t.includes('mortality')) type = 'mortality';
+                            else if(t.includes('hospitalization')) type = 'hfhosp';
+                            else if(t.includes('composite')) type = 'composite';
+
+                            const cox = m.analyses?.find(a => {
+                                const pt = (a.paramType||"").toLowerCase();
+                                return pt.includes('hazard ratio') || pt.includes('risk ratio') || pt.includes('odds ratio') || pt.includes('relative risk');
+                            });
+                            
+                            if(cox && cox.paramValue && cox.ciLowerLimit && cox.ciUpperLimit) {
+                                outcomes.push({
+                                    id: type,
+                                    name: m.title,
+                                    hr: parseFloat(cox.paramValue),
+                                    lower: parseFloat(cox.ciLowerLimit),
+                                    upper: parseFloat(cox.ciUpperLimit),
+                                    se: window.Utils.ciToSe(parseFloat(cox.ciLowerLimit), parseFloat(cox.ciUpperLimit)),
+                                    priority: priority
+                                });
+                            }
+                        });
+                    } else {
+                        const elim = p.eligibilityModule;
+                        if (elim) {
+                             let min = parseInt(elim.minimumAge) || 40;
+                             let max = parseInt(elim.maximumAge) || 90;
+                             age = (min + max) / 2;
+                        }
+                    }
+                    
+                    const uniqueOutcomes = [];
+                    const types = ['mortality', 'hfhosp', 'composite'];
+                    
+                    let foundSpecific = false;
+                    types.forEach(t => {
+                        const candidates = outcomes.filter(o => o.id === t);
+                        if (candidates.length > 0) {
+                            candidates.sort((a,b) => {
+                                if (a.priority !== b.priority) return a.priority - b.priority;
+                                const widthA = Math.log(a.upper) - Math.log(a.lower);
+                                const widthB = Math.log(b.upper) - Math.log(b.lower);
+                                return widthA - widthB;
+                            });
+                            uniqueOutcomes.push(candidates[0]); 
+                            foundSpecific = true;
+                        }
+                    });
+                    
+                    if (!foundSpecific) {
+                          const otherCandidates = outcomes.filter(o => o.id === 'other');
+                          if (otherCandidates.length > 0) {
+                             otherCandidates.sort((a,b) => {
+                                if (a.priority !== b.priority) return a.priority - b.priority;
+                                return (Math.log(a.upper) - Math.log(a.lower)) - (Math.log(b.upper) - Math.log(b.lower));
+                             });
+                             uniqueOutcomes.push(otherCandidates[0]);
+                           }
+                    }
+
+                    return {
+                        id, 
+                        name: PRETTY_NAMES[id] || title.substring(0, 24) + (title.length > 24 ? '…' : ''),
+                        fullName: title, 
+                        n, 
+                        component: this.classifyComponent(classificationText),
+                        outcomes: uniqueOutcomes,
+                        features: [age, sex, ef, year]
+                    };
+                } catch(e) { return null; }
+            }
+        };
+
+        // --- 3. STATS ENGINE ---
+        window.StatsEngine = {
+            solveWLS: (X, Y, W_diag, clusters) => {
+                try {
+                    const mathX = math.matrix(X);
+                    const mathY = math.matrix(Y.map(y=>[y]));
+                    const mathW = math.diag(W_diag);
+                    const XtW = math.multiply(math.transpose(mathX), mathW);
+                    const XtWX = math.multiply(XtW, mathX);
+                    const ridge = math.identity(XtWX.size()[0]).map(v => v * 0.0001); 
+                    const inv = math.inv(math.add(XtWX, ridge));
+                    const Beta = math.multiply(math.multiply(inv, XtW), mathY);
+                    
+                    let variances = math.diag(inv).toArray();
+
+                    if(clusters && clusters.length === Y.length) {
+                        const resid = math.subtract(mathY, math.multiply(mathX, Beta)).toArray().flat();
+                        const k = Beta.size()[0];
+                        const clusterMap = {};
+                        clusters.forEach((c, i) => { if(!clusterMap[c]) clusterMap[c] = []; clusterMap[c].push(i); });
+                        
+                        let meat = math.zeros(k, k);
+                        Object.values(clusterMap).forEach(indices => {
+                            let sumXe = math.zeros(k, 1);
+                            indices.forEach(idx => {
+                                const Xi = math.transpose(math.row(mathX, idx)); 
+                                const ei = resid[idx];
+                                const wi = W_diag[idx]; 
+                                const term = math.multiply(Xi, wi * ei);
+                                sumXe = math.add(sumXe, term);
+                            });
+                            meat = math.add(meat, math.multiply(sumXe, math.transpose(sumXe)));
+                        });
+                        
+                        const sandwich = math.multiply(math.multiply(inv, meat), inv);
+                        variances = math.diag(sandwich).toArray();
+                    }
+
+                    const residArr = math.subtract(mathY, math.multiply(mathX, Beta)).toArray().flat();
+                    let rss = 0;
+                    for(let i=0; i<residArr.length; i++) rss += W_diag[i] * (residArr[i]**2);
+                    return { beta: Beta.toArray().flat(), variances, rss };
+                } catch(e) { return null; }
+            },
+
+            solveMetaReg: (X, Y, W_diag, Age, clusters) => {
+                 const X_aug = X.map((row, i) => [...row, Age[i] - 65]); 
+                 return window.StatsEngine.solveWLS(X_aug, Y, W_diag, clusters);
+            },
+
+            runCNMA: (trials, outcomeType) => {
+                const valid = trials.filter(t => t.outcomes.some(o => o.id === outcomeType || o.id === 'composite'));
+                if(valid.length < 3) return null;
+
+                const components = [...new Set(valid.map(t => t.component))].filter(c => c!=='Other').sort();
+                const K = components.length;
+                const X = [], Y = [], V = [], Age = [], Clusters = [];
+
+                valid.forEach(t => {
+                    const outcome = t.outcomes.find(o => o.id === outcomeType || o.id === 'composite');
+                    if(outcome && t.component !== 'Other') {
+                        const row = new Array(K).fill(0);
+                        const idx = components.indexOf(t.component);
+                        if (idx >= 0) {
+                            row[idx] = 1;
+                            X.push(row);
+                            Y.push(Math.log(outcome.hr));
+                            V.push(outcome.se ** 2);
+                            Age.push(t.features[0]); 
+                            Clusters.push(t.id); 
+                        }
+                    }
+                });
+
+                if(X.length === 0) return null;
+
+                const tauGrid = Array.from({length: 30}, (_, i) => i * 0.02); 
+                let bestResults = null, minAIC = Infinity;
+                let n = Y.length;
+
+                tauGrid.forEach(tau => {
+                    const W = V.map(v => 1 / (v + tau*tau + 1e-10));
+                    const res = window.StatsEngine.solveWLS(X, Y, W, Clusters);
+                    if(res) {
+                        const aic = 2*K + n * Math.log(res.rss/n);
+                        if(aic < minAIC) { minAIC = aic; bestResults = res; bestResults.tau = tau; }
+                    }
+                });
+
+                if(!bestResults) return null;
+
+                return components.map((c, i) => {
+                    const logHR = bestResults.beta[i];
+                    const se = Math.sqrt(bestResults.variances[i]);
+                    return {
+                        component: c,
+                        hr: Math.exp(logHR),
+                        lower: Math.exp(logHR - 1.96*se),
+                        upper: Math.exp(logHR + 1.96*se),
+                        tau: bestResults.tau
+                    };
+                });
+            },
+
+            runEggers: (trials, outcomeType) => {
+                const valid = trials.filter(t => t.outcomes.some(o => o.id === outcomeType || o.id === 'composite'));
+                if(valid.length < 5) return null;
+                const x = [], y = []; 
+                valid.forEach(t => {
+                    const o = t.outcomes.find(o => o.id === outcomeType || o.id === 'composite');
+                    x.push(o.se); y.push(Math.log(o.hr) / o.se);
+                });
+                const mx = window.Utils.mean(x), my = window.Utils.mean(y);
+                const n = x.length;
+                const num = window.Utils.sum(x.map((xi,i) => (xi-mx)*(y[i]-my)));
+                const den = window.Utils.sum(x.map(xi => (xi-mx)**2));
+                const intercept = my - (num/den)*mx;
+                const residuals = y.map((yi, i) => yi - (intercept + (num/den)*x[i]));
+                const rss = window.Utils.sum(residuals.map(r => r**2));
+                const sigma2 = rss / (n - 2);
+                const seIntercept = Math.sqrt(sigma2 * (1/n + (mx**2)/den));
+                const tStat = intercept / seIntercept;
+                const pValue = window.Utils.pValueT(Math.abs(tStat), n-2) / 2;
+                return { intercept, pValue, tStat };
+            },
+            
+            runInteractionCheck: (trials, outcomeType) => {
+                const valid = trials.filter(t => t.outcomes.some(o => o.id === outcomeType || o.id === 'composite'));
+                if(valid.length < 4) return { Q: 0, p: 1.0, I2: 0 };
+                const Y = valid.map(t => {
+                      const o = t.outcomes.find(x => x.id === outcomeType || x.id === 'composite');
+                      return { val: Math.log(o.hr), se: o.se };
+                });
+                let num = 0, den = 0;
+                Y.forEach(y => { const w = 1/(y.se**2); num += w * y.val; den += w; });
+                const mean = num/den;
+                let Q = 0; Y.forEach(y => { Q += Math.pow((y.val - mean)/y.se, 2); });
+                const df = Y.length - 1;
+                const p = window.Utils.pValueChiSq(Q, df); 
+                const I2 = Math.max(0, (Q - df) / Q * 100);
+                return { Q, p, I2 };
+            }
+        };
+        
+        // --- 3b. BAYESIAN OVERLAY (Frequentist Approx via Monte Carlo) ---
+        window.BayesEngine = {
+            buildPosterior: (cnma, options = {}) => {
+                if (!Array.isArray(cnma) || cnma.length < 2) return null;
+                const priorSD = options.priorSD || 0.3; 
+                const priorVar = priorSD * priorSD;
+                const draws = options.draws || 3000;
+                const K = cnma.length;
+                const components = cnma.map(r => r.component);
+                const muPost = new Array(K);
+                const varPost = new Array(K);
+
+                cnma.forEach((r, i) => {
+                    const logHR = Math.log(r.hr);
+                    const se = (Math.log(r.upper) - Math.log(r.lower)) / 3.92 || 0.3;
+                    const se2 = se * se;
+                    const varInv = (1 / priorVar) + (1 / se2);
+                    const vPost = 1 / varInv;
+                    const mPost = vPost * (logHR / se2); 
+                    muPost[i] = mPost;
+                    varPost[i] = vPost;
+                });
+
+                const betterCounts = Array.from({ length: K }, () => Array(K).fill(0));
+                const rankCounts = Array.from({ length: K }, () => Array(K).fill(0));
+                const theta = new Array(K);
+                const hr = new Array(K);
+
+                for (let d = 0; d < draws; d++) {
+                    for (let i = 0; i < K; i++) {
+                        const sd = Math.sqrt(varPost[i]);
+                        theta[i] = muPost[i] + sd * window.Utils.randn();
+                        hr[i] = Math.exp(theta[i]);
+                    }
+                    const idx = [...Array(K).keys()];
+                    idx.sort((a, b) => hr[a] - hr[b]);
+                    idx.forEach((compIndex, rankIdx) => { rankCounts[compIndex][rankIdx] += 1; });
+
+                    for (let i = 0; i < K; i++) {
+                        for (let j = i + 1; j < K; j++) {
+                            if (hr[i] < hr[j]) { betterCounts[i][j] += 1; } else if (hr[j] < hr[i]) { betterCounts[j][i] += 1; }
+                        }
+                    }
+                }
+
+                const pairwise = Array.from({ length: K }, () => Array(K).fill(0));
+                for (let i = 0; i < K; i++) {
+                    for (let j = 0; j < K; j++) {
+                        if (i === j) { pairwise[i][j] = 0; } else { pairwise[i][j] = betterCounts[i][j] / draws; }
+                    }
+                }
+
+                const summary = components.map((comp, i) => {
+                    let meanRank = 0;
+                    let cumProb = 0;
+                    for (let r = 0; r < K; r++) { 
+                        const pRank = rankCounts[i][r] / draws; 
+                        meanRank += (r + 1) * pRank; 
+                        if (r < K - 1) cumProb += (rankCounts[i][r] / draws);
+                    }
+                    const probBest = rankCounts[i][0] / draws;
+                    const sucra = cumProb / (K - 1);
+                    return { component: comp, probBest, meanRank, sucra };
+                });
+
+                return { components, muPost, varPost, pairwise, ranks: { probs: rankCounts.map(row => row.map(c => c / draws)), summary } };
+            }
+        };
+
+        // --- 4. GEOMETRY (PCA via Covariance Eigenalysis) ---
+        window.GeometryEngine = {
+            jacobi: (A) => {
+                const n = A.length;
+                let V = Array.from({length: n}, (_, i) => Array.from({length: n}, (_, j) => i === j ? 1 : 0));
+                let D = A.map(row => [...row]);
+                for (let iter = 0; iter < 50; iter++) {
+                    let maxOff = 0; let p = 0, q = 1;
+                    for (let i = 0; i < n; i++) { for (let j = i + 1; j < n; j++) { if (Math.abs(D[i][j]) > maxOff) { maxOff = Math.abs(D[i][j]); p = i; q = j; } } }
+                    if (maxOff < 1e-10) break;
+                    const phi = 0.5 * Math.atan2(2 * D[p][q], D[p][p] - D[q][q]); const c = Math.cos(phi); const s = Math.sin(phi);
+                    const App = D[p][p]; const Aqq = D[q][q]; const Apq = D[p][q];
+                    D[p][p] = c*c*App - 2*s*c*Apq + s*s*Aqq; D[q][q] = s*s*App + 2*s*c*Apq + c*c*Aqq; D[p][q] = 0; D[q][p] = 0;
+                    for (let i = 0; i < n; i++) { if (i !== p && i !== q) { const Aip = D[i][p]; const Aiq = D[i][q]; D[i][p] = c*Aip - s*Aiq; D[p][i] = D[i][p]; D[i][q] = s*Aip + c*Aiq; D[q][i] = D[i][q]; } const Vip = V[i][p]; const Viq = V[i][q]; V[i][p] = c*Vip - s*Viq; V[i][q] = s*Vip + c*Viq; }
+                }
+                const eigenvalues = D.map((row, i) => row[i]); return { eigenvalues, eigenvectors: V };
+            },
+
+            computePCA: (trials) => {
+                const validTrials = trials.filter(t => Array.isArray(t.features) && t.features.length >= 3);
+                if(validTrials.length < 3) return [];
+                const data = validTrials.map(t => t.features);
+                const dim = data[0].length;
+                const means = Array(dim).fill(0).map((_, i) => window.Utils.mean(data.map(r => r[i])));
+                const sds = Array(dim).fill(0).map((_, i) => Math.sqrt(window.Utils.variance(data.map(r => r[i]))) || 1);
+                const Z = data.map(r => r.map((v, i) => (v - means[i]) / sds[i]));
+                try {
+                    const n = Z.length;
+                    const cov = Array.from({length: dim}, () => Array(dim).fill(0));
+                    for(let i=0; i<dim; i++) { for(let j=0; j<dim; j++) { let s = 0; for(let k=0; k<n; k++) s += Z[k][i] * Z[k][j]; cov[i][j] = s / (n - 1); } }
+                    const { eigenvalues, eigenvectors } = window.GeometryEngine.jacobi(cov);
+                    const indices = eigenvalues.map((e, i) => ({e, i})).sort((a, b) => b.e - a.e).map(d => d.i);
+                    const pc1 = indices.length > 0 ? eigenvectors.map(row => row[indices[0]]) : [1,0,0,0];
+                    const pc2 = indices.length > 1 ? eigenvectors.map(row => row[indices[1]]) : [0,1,0,0];
+                    return validTrials.map((t, i) => { let xVal = 0, yVal = 0; for(let d=0; d<dim; d++) { xVal += Z[i][d] * pc1[d]; yVal += Z[i][d] * pc2[d]; } return { id: t.id, x: xVal, y: yVal, cluster: t.component, features: t.features }; });
+                } catch(e) { window.Logger.log("PCA Error: " + e.message, "error"); return []; }
+            },
+            profileDistance: (feat, target) => {
+                const ageDiff = Math.abs(feat[0] - target[0]); const sexDiff = Math.abs(feat[1] - target[1]) * 100; const efDiff = Math.abs(feat[2] - target[2]); const yearDiff = Math.abs(feat[3] - target[3]);
+                return (ageDiff/15)*0.5 + (sexDiff/50)*0.1 + (efDiff/10)*0.3 + (yearDiff/10)*0.1;
+            },
+            computeGowerMatrix: (trials, components) => {
+                const K = components.length; const matrix = Array.from({length: K}, () => Array(K).fill(0));
+                const agg = {};
+                components.forEach(c => { const subset = trials.filter(t => t.component === c); if(subset.length === 0) return; agg[c] = [0,0,0,0].map((_, i) => window.Utils.mean(subset.map(t => t.features[i]))); });
+                const ranges = [20, 1, 30, 20];
+                for(let i=0; i<K; i++) {
+                    for(let j=0; j<K; j++) {
+                        if(i === j) { matrix[i][j] = 0; continue; }
+                        const c1 = components[i]; const c2 = components[j];
+                        if(!agg[c1] || !agg[c2]) { matrix[i][j] = 1; continue; }
+                        let dist = 0; for(let f=0; f<4; f++) { dist += Math.abs(agg[c1][f] - agg[c2][f]) / ranges[f]; }
+                        matrix[i][j] = dist / 4;
+                    }
+                }
+                return matrix;
+            }
+        };
+        
+        // --- 5. TOPOLOGY ENGINE ---
+        window.TopologyEngine = {
+            computeBarcode: (geo) => {
+                if(!geo || geo.length < 3) return [];
+                const steps = 20; const maxDist = 3.0; const barcode = [];
+                for(let i=0; i<=steps; i++) {
+                    const threshold = (i/steps) * maxDist;
+                    const adj = [];
+                    for(let a=0; a<geo.length; a++) {
+                        for(let b=a+1; b<geo.length; b++) {
+                            const d = Math.sqrt((geo[a].x-geo[b].x)**2 + (geo[a].y-geo[b].y)**2);
+                            if(d <= threshold) { if(!adj[a]) adj[a] = []; if(!adj[b]) adj[b] = []; adj[a].push(b); adj[b].push(a); }
+                        }
+                    }
+                    let components = 0;
+                    const visited = new Set();
+                    for(let n=0; n<geo.length; n++) {
+                        if(!visited.has(n)) {
+                            components++;
+                            const q = [n]; visited.add(n);
+                            while(q.length) {
+                                const curr = q.pop();
+                                (adj[curr] || []).forEach(nb => { if(!visited.has(nb)) { visited.add(nb); q.push(nb); } });
+                            }
+                        }
+                    }
+                    barcode.push({ t: threshold, c: components });
+                }
+                return barcode;
+            },
+            runSpecificationCurve: (allTrials, outcomeType) => {
+                const specs = [
+                    { name: 'All Data', fn: t => true },
+                    { name: 'Age < 75', fn: t => t.features[0] < 75 },
+                    { name: 'N > 1000', fn: t => t.n > 1000 },
+                    { name: 'Post-2010', fn: t => t.features[3] > 2010 },
+                    { name: 'LVEF < 40', fn: t => t.features[2] < 40 }
+                ];
+                const results = [];
+                specs.forEach(spec => {
+                    const subset = allTrials.filter(spec.fn);
+                    const cnma = window.StatsEngine.runCNMA(subset, outcomeType);
+                    if(cnma) {
+                        const active = cnma.filter(c => c.hr < 1.0);
+                        if(active.length) {
+                            const avgHR = window.Utils.mean(active.map(c => c.hr));
+                            results.push({ spec: spec.name, hr: avgHR, n: subset.length });
+                        }
+                    }
+                });
+                return results.sort((a,b) => a.hr - b.hr);
+            }
+        };
+
+        // --- 6. WORLD ENGINE (HTA) ---
+        class HFBin {
+            constructor(id, features, size) {
+                this.id = id; this.features = features; this.size = Math.min(size || 0, 15000);
+                this.state = { stable: this.size, hospitalized: 0, dead: 0 };
+            }
+        }
+        class Policy {
+            constructor(name, rules) { this.name = name; this.rules = rules; }
+            getTreatment(bin) { for (let rule of this.rules) { const tx = rule(bin); if (tx) return tx; } return 'Placebo'; }
+        }
+        const MuToTheta = {
+            predict: (bin, treatment, cnmaResults) => {
+                if (treatment === 'Placebo' || treatment === 'SoC' || treatment === 'Other') return 1.0;
+                const componentEffect = cnmaResults.find(r => r.component === treatment);
+                let logHR = componentEffect ? Math.log(componentEffect.hr) : 0;
+                if(bin.features[0] > 75) logHR *= 0.9;
+                return Math.exp(logHR);
+            }
+        };
+        window.WorldEngine = {
+            params: { timeHorizon: 10, dt: 0.25, baseMortality: 0.08, baseHosp: 0.15, costs: { drug: 500, hosp: 15000 } },
+            run: (policy, populationBins, cnmaResults) => {
+                const history = [];
+                let currentTime = 0;
+                const activeBins = populationBins.map(b => new HFBin(b.id, b.features, b.size || 1000));
+                let cumQALY = 0, cumCost = 0;
+                while (currentTime < window.WorldEngine.params.timeHorizon) {
+                    let stepQALY = 0, stepCost = 0, totalDead = 0, totalHosp = 0, totalStable = 0;
+                    activeBins.forEach(bin => {
+                        const tx = policy.getTreatment(bin);
+                        const hr = MuToTheta.predict(bin, tx, cnmaResults);
+                        let rateDeath = window.WorldEngine.params.baseMortality * hr;
+                        let rateHosp = window.WorldEngine.params.baseHosp * hr;
+                        const totalRate = rateDeath + rateHosp;
+                        const pEvent = 1 - Math.exp(-totalRate * window.WorldEngine.params.dt);
+                        let pDie = (totalRate > 0) ? (pEvent * (rateDeath / totalRate)) : 0;
+                        let pHosp = (totalRate > 0) ? (pEvent * (rateHosp / totalRate)) : 0;
+                        
+                        const dyingStable = bin.state.stable * pDie;
+                        const hospStable = bin.state.stable * pHosp;
+                        const dyingHosp = bin.state.hospitalized * (pDie * 2);
+                        const recovering = bin.state.hospitalized * 0.5;
+                        
+                        bin.state.stable += (recovering - dyingStable - hospStable);
+                        bin.state.hospitalized += (hospStable - dyingHosp - recovering);
+                        bin.state.dead += (dyingStable + dyingHosp);
+                        
+                        const q = (bin.state.stable * 1.0 + bin.state.hospitalized * 0.6) * window.WorldEngine.params.dt;
+                        const c = (tx !== 'Placebo' ? bin.state.stable * window.WorldEngine.params.costs.drug * window.WorldEngine.params.dt : 0) + (hospStable * window.WorldEngine.params.costs.hosp);
+                        stepQALY += q; stepCost += c; totalDead += bin.state.dead; totalHosp += bin.state.hospitalized; totalStable += bin.state.stable;
+                    });
+                    cumQALY += stepQALY; cumCost += stepCost;
+                    history.push({ t: currentTime, totalStable, totalHosp, totalDead, stepQALY, stepCost, cumQALY, cumCost });
+                    currentTime += window.WorldEngine.params.dt;
+                }
+                return history;
+            }
+        };
+
+        // --- 7. UI CONTROLLER & APP STATE ---
+        window.COMPONENT_STYLES = { 'SGLT2i':{color:'#10b981',icon:'💊'}, 'ARNi':{color:'#a855f7',icon:'💜'}, 'ACEi/ARB':{color:'#3b82f6',icon:'🧬'}, 'MRA':{color:'#f97316',icon:'🔶'}, 'Beta-blocker':{color:'#0ea5e9',icon:'⚡'}, 'HR Modulator':{color:'#22c55e',icon:'💓'}, 'sGC':{color:'#ec4899',icon:'⚙️'}, 'Myosin':{color:'#ef4444',icon:'💪'}, 'Diuretic':{color:'#eab308',icon:'💧'}, 'Device':{color:'#6366f1',icon:'📡'}, 'Non-drug':{color:'#14b8a6',icon:'🏃'}, 'Other HF drug':{color:'#6b7280',icon:'🧪'}, 'Other':{color:'#64748b',icon:'⚪'} };
+        window.COMPONENT_TO_MACRO = { 'SGLT2i':'GDMT Core', 'ARNi':'GDMT Core', 'ACEi/ARB':'GDMT Core', 'MRA':'GDMT Core', 'Beta-blocker':'GDMT Core', 'HR Modulator':'GDMT Core', 'Diuretic':'Symptom / Supportive', 'Device':'Device / Advanced', 'Non-drug':'Non-drug / Care', 'sGC':'Adjunct / Other', 'Myosin':'Adjunct / Other', 'Other HF drug':'Adjunct / Other', 'Other':'Adjunct / Other' };
+        window.MACRO_STYLES = { 'GDMT Core':{color:'#22c55e'}, 'Symptom / Supportive':{color:'#eab308'}, 'Device / Advanced':{color:'#6366f1'}, 'Non-drug / Care':{color:'#14b8a6'}, 'Adjunct / Other':{color:'#a855f7'} };
+
+        // INITIALIZE APP OBJECT SEQUENTIALLY TO PREVENT UNDEFINED ERRORS
+        window.App = {};
+        window.App.allTrials = []; 
+        window.App.data = []; 
+        window.App.latestCNMA = []; 
+        window.App.componentCounts = {}; 
+        window.App.hiddenComponents = new Set(); 
+        window.App.coreOnly = false; 
+        window.App.bayes = null; 
+        window.App.gdmtCoreSet = new Set(['SGLT2i', 'ARNi', 'ACEi/ARB', 'MRA', 'Beta-blocker', 'HR Modulator']); 
+        window.App.currentOutcome = 'mortality'; 
+        window.App.currentGeo = [];
+        window.App.targetProfiles = { 'standard': { name: 'Standard HFrEF', features: [70, 0.3, 30, 2025] }, 'frail': { name: 'Frail Elderly', features: [85, 0.5, 45, 2025] }, 'young': { name: 'Young / De Novo', features: [50, 0.2, 20, 2025] } };
+        window.App.activeTarget = null;
+
+        // Define methods one by one to avoid syntax crashes
+        window.App.init = function() {
+            window.App.activeTarget = window.App.targetProfiles['standard'];
+            document.addEventListener('keydown', (e) => { if(e.key === 'Escape') window.App.hideCard(); });
+            document.addEventListener('click', (e) => { 
+                if (!e.target.closest('#trial-detail-card') && !e.target.closest('[id^="transport-item-"]') && !e.target.closest('.js-plotly-plot')) {
+                    window.App.hideCard(); 
+                }
+            });
+            const legend = document.getElementById('component-legend');
+            if (legend) { legend.addEventListener('click', (e) => { const btn = e.target.closest('[data-comp]'); if (!btn) return; const comp = btn.getAttribute('data-comp'); if (!comp) return; if (window.App.hiddenComponents.has(comp)) window.App.hiddenComponents.delete(comp); else window.App.hiddenComponents.add(comp); btn.classList.toggle('legend-chip-muted'); window.App.renderForestPlot(); if (window.App.latestCNMA && window.App.latestCNMA.length >= 2) { const visibleCnma = window.App.latestCNMA.filter(r => !window.App.hiddenComponents.has(r.component)); window.App.bayes = visibleCnma.length >= 2 ? window.BayesEngine.buildPosterior(visibleCnma, { draws: 3000, priorSD: 0.3 }) : null; } else { window.App.bayes = null; } window.App.renderLeagueTable(); }); }
+            const container = document.getElementById('network-container');
+            if (container) window.network = new vis.Network( container, { nodes: [], edges: [] }, { nodes: { shape: 'dot', font: { color: 'white' } }, physics: { stabilization: { enabled: true, iterations: 1000 }, solver: 'barnesHut' }, interaction: { hover: true } } );
+            
+            console.log("App initialized.");
+        };
+
+        window.App.runPipeline = async function() {
+            const btn = document.getElementById('btn-fetch');
+            btn.innerHTML = `<span class="loader"></span> processing...`; btn.disabled = true;
+            window.Logger.log("Starting Data Pipeline...", "info");
+            try {
+                const client = new window.CtgovClient();
+                const parser = new window.TrialParser();
+                let allRaw = []; let token = null; let pages = 0;
+                do {
+                    const batch = await client.fetchBatch(token);
+                    allRaw = allRaw.concat(batch.studies || []);
+                    token = batch.nextPageToken;
+                    pages++;
+                    window.Logger.log(`Fetched page ${pages}...`, "info");
+                } while(token && pages < 8);
+                const parsed = allRaw.map(s => parser.parse(s)).filter(t => t);
+                window.App.allTrials = parsed;
+                window.App.data = parsed.filter(t => t.outcomes.some(o => isFinite(o.hr) && isFinite(o.se)));
+                window.Logger.log(`Found ${parsed.length} total trials.`, "info");
+                window.Logger.log(`Analytic subset: ${window.App.data.length} trials.`, "success");
+                window.App.updateUI();
+            } catch(e) { window.Logger.log("Error: " + e.message, "error"); } finally { btn.innerHTML = `<i class="fa-solid fa-database"></i> <span>Fetch Universe (Live)</span>`; btn.disabled = false; }
+        };
+
+        window.App.injectDemo = function() {
+            const demo = [
+                {id: 'NCT01920711', name: 'PARADIGM-HF', fullName: 'PARADIGM-HF', n: 8442, component: 'ARNi', outcomes: [{id:'mortality', hr:0.8, se:0.05}], features: [64, 0.22, 29, 2014]},
+                {id: 'NCT03036124', name: 'DAPA-HF', fullName: 'DAPA-HF', n: 4744, component: 'SGLT2i', outcomes: [{id:'mortality', hr:0.74, se:0.06}], features: [66, 0.23, 31, 2019]},
+                {id: 'NCT01644394', name: 'EMPEROR-Red', fullName: 'EMPEROR-Reduced', n: 3730, component: 'SGLT2i', outcomes: [{id:'mortality', hr:0.75, se:0.07}], features: [67, 0.24, 27, 2020]},
+                {id: 'NCT00094302', name: 'TOPCAT', fullName: 'TOPCAT', n: 3445, component: 'MRA', outcomes: [{id:'mortality', hr:0.89, se:0.08}], features: [68, 0.50, 55, 2013]},
+                {id: 'NCT02861534', name: 'VICTORIA', fullName: 'VICTORIA', n: 5050, component: 'sGC', outcomes: [{id:'mortality', hr:0.95, se:0.06}], features: [67, 0.24, 29, 2020]},
+                {id: 'NCT02929329', name: 'GALACTIC-HF', fullName: 'GALACTIC-HF', n: 8256, component: 'Myosin', outcomes: [{id:'mortality', hr:0.92, se:0.04}], features: [69, 0.21, 28, 2021]},
+                {id: 'NCT03619213', name: 'DELIVER', fullName: 'DELIVER', n: 6263, component: 'SGLT2i', outcomes: [{id:'mortality', hr:0.88, se:0.04}], features: [72, 0.44, 54, 2022]},
+                {id: 'NCT01035255', name: 'EMPHASIS-HF', fullName: 'EMPHASIS-HF', n: 2737, component: 'MRA', outcomes: [{id:'mortality', hr:0.76, se:0.08}], features: [69, 0.22, 26, 2011]},
+                {id: 'NCT02193772', name: 'COMMANDER-HF', fullName: 'COMMANDER-HF', n: 5022, component: 'Anticoagulant', outcomes: [{id:'mortality', hr:0.95, se:0.04}], features: [71, 0.23, 34, 2018]}
+            ];
+            window.App.allTrials = demo; window.App.data = demo; window.Logger.log("Demo Data Loaded.", "success"); window.App.updateUI();
+        };
+        
+        window.App.injectRegistry = function() { window.Logger.log("Registry Upload Simulated.", "info"); };
+
+        window.App.hideCard = function() {
+            const card = document.getElementById('trial-detail-card');
+            if (card) { card.classList.add('opacity-0', 'translate-y-2', 'pointer-events-none'); }
+            document.querySelectorAll('.transport-item-active').forEach(el => el.classList.remove('transport-item-active'));
+            const plotDiv = document.getElementById('geometry-plot');
+            if (plotDiv && plotDiv.data && plotDiv.data.length > 1) Plotly.restyle('geometry-plot', { x: [[]], y: [[]] }, [1]);
+        };
+
+        window.App.highlightTrial = function(id) {
+            const card = document.getElementById('trial-detail-card');
+            document.querySelectorAll('.transport-item-active').forEach(el => el.classList.remove('transport-item-active'));
+            const el = document.getElementById(`transport-item-${id}`);
+            if (el) { el.classList.add('transport-item-active'); el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }
+            if (window.App.currentGeo) {
+                const point = window.App.currentGeo.find(g => g.id === id);
+                if (point) {
+                    const plotEl = document.getElementById('geometry-plot');
+                    if (plotEl && plotEl.data && plotEl.data.length > 1) Plotly.restyle('geometry-plot', { x: [[point.x]], y: [[point.y]] }, [1]);
+                    const trial = window.App.allTrials.find(d => d.id === id); 
+                    if(trial) {
+                        const outcome = trial.outcomes.find(o => o.id === window.App.currentOutcome || o.id === 'composite');
+                        const hrTxt = outcome ? `${outcome.hr.toFixed(2)}` : 'N/A';
+                        document.getElementById('card-id').innerText = trial.id;
+                        document.getElementById('card-n').innerText = `N=${trial.n}`;
+                        document.getElementById('card-title').innerText = trial.name;
+                        document.getElementById('card-class').innerText = trial.component;
+                        document.getElementById('card-hr').innerText = hrTxt;
+                        document.getElementById('card-demo').innerText = `${trial.features[0].toFixed(0)}y / ${trial.features[2].toFixed(0)}%`;
+                        if(card) card.classList.remove('opacity-0', 'translate-y-2', 'pointer-events-none');
+                    }
+                }
+            }
+        };
+
+        window.App.renderForestPlot = function() {
+            const cnma = window.App.latestCNMA || [];
+            const modeEl = document.getElementById('forest-mode');
+            const mode = modeEl ? modeEl.value : 'components';
+            if (!document.getElementById('forest-plot')) return;
+            if (!cnma.length) { Plotly.newPlot('forest-plot', [], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'} }, {displayModeBar:false}); return; }
+            const visible = cnma.filter(r => !window.App.hiddenComponents.has(r.component));
+            if (!visible.length) { Plotly.newPlot('forest-plot', [], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', annotations: [{ text: 'All classes hidden.', xref: 'paper', yref: 'paper', x: 0.5, y: 0.5, showarrow: false, font: { size: 12, color: '#94a3b8' } }] }, {displayModeBar:false}); return; }
+
+            let labels = [], hrs = [], lowers = [], uppers = [], colors = [];
+            if (mode === 'components') {
+                visible.forEach(r => {
+                    labels.push(r.component); hrs.push(r.hr); lowers.push(r.lower); uppers.push(r.upper);
+                    const style = window.COMPONENT_STYLES[r.component] || {}; colors.push(style.color || '#94a3b8');
+                });
+            } else {
+                const groups = {};
+                visible.forEach(r => {
+                    const macro = window.COMPONENT_TO_MACRO[r.component] || 'Adjunct / Other';
+                    if (!groups[macro]) groups[macro] = [];
+                    groups[macro].push({ hr: r.hr, lower: r.lower, upper: r.upper });
+                });
+                Object.entries(groups).forEach(([macro, arr]) => {
+                    const logs = arr.map(a => Math.log(a.hr));
+                    const ses = arr.map(a => (Math.log(a.upper) - Math.log(a.lower)) / 3.92 );
+                    const weights = ses.map(se => (se > 0 ? 1 / (se * se) : 0));
+                    const Wsum = weights.reduce((a,b) => a + b, 0) || 1e-8;
+                    const pooledLogHR = logs.reduce((acc, l, i) => acc + l * weights[i], 0) / Wsum;
+                    const pooledSe = Math.sqrt(1 / Wsum);
+                    labels.push(macro); hrs.push(Math.exp(pooledLogHR)); lowers.push(Math.exp(pooledLogHR - 1.96 * pooledSe)); uppers.push(Math.exp(pooledLogHR + 1.96 * pooledSe));
+                    const style = window.MACRO_STYLES[macro] || {}; colors.push(style.color || '#94a3b8');
+                });
+            }
+            const xErr = uppers.map((u, i) => u - hrs[i]);
+            const minHR = Math.min(...lowers); const maxHR = Math.max(...uppers);
+            const xMin = Math.max(0, minHR - 0.1); const xMax = maxHR + 0.1;
+
+            Plotly.newPlot('forest-plot', [{ x: hrs, y: labels, type: 'bar', orientation: 'h', error_x: { type: 'data', array: xErr, visible: true }, marker: { color: colors } }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'}, xaxis:{ range:[xMin, xMax], title:`HR (${window.App.currentOutcome})` }, shapes: [{ type: 'line', x0: 1, x1: 1, yref: 'paper', y0: 0, y1: 1, line: { color: '#475569', width: 1, dash: 'dot' } }], margin:{l:80, t:10, b:40} }, {displayModeBar:false});
+        };
+        
+        window.App.renderLeagueTable = function() {
+            const tbl = document.getElementById('league-table');
+            const summaryEl = document.getElementById('league-summary');
+            if (!tbl || !summaryEl) return;
+            const bayes = window.App.bayes;
+            if (!bayes || !bayes.components || bayes.components.length < 2) { summaryEl.innerText = 'Bayesian ranking requires ≥ 2 active components.'; tbl.innerHTML = ''; return; }
+            const comps = bayes.components; const K = comps.length;
+            const pair = bayes.pairwise; const summary = bayes.ranks.summary;
+
+            const sorted = [...summary].sort((a, b) => b.sucra - a.sucra);
+            const topLines = sorted.slice(0, 3).map(s => `${s.component} (SUCRA ${(s.sucra * 100).toFixed(0)}%)`);
+            summaryEl.innerHTML = topLines.join(' · ');
+
+            let html = '<table class="w-full border-collapse text-[10px]">';
+            html += '<tr><th class="text-left text-[9px] text-slate-500 pr-2">Row > Col</th>';
+            comps.forEach(c => { html += `<th class="text-[9px] text-slate-500 px-1">${c}</th>`; });
+            html += '</tr>';
+            for (let i = 0; i < K; i++) {
+                html += '<tr>';
+                html += `<th class="text-[9px] text-slate-500 pr-2 text-left">${comps[i]}</th>`;
+                for (let j = 0; j < K; j++) {
+                    if (i === j) { html += '<td class="text-center text-[9px] text-slate-600">–</td>'; continue; }
+                    const p = pair[i][j]; const pct = (p * 100).toFixed(0);
+                    let bg = 'transparent';
+                    if (p > 0.75) bg = 'rgba(16,185,129,0.55)'; else if (p > 0.55) bg = 'rgba(16,185,129,0.25)';
+                    else if (p < 0.25) bg = 'rgba(248,113,113,0.55)'; else if (p < 0.45) bg = 'rgba(248,113,113,0.25)';
+                    html += `<td class="text-center px-1 py-0.5 text-[9px]" style="background:${bg}">${pct}</td>`;
+                }
+                html += '</tr>';
+            }
+            html += '</table>';
+            tbl.innerHTML = html;
+        };
+
+        window.App.renderExperimental = function() {
+            const barcode = window.TopologyEngine.computeBarcode(window.App.currentGeo);
+            if(barcode.length) {
+                const trace = { x: barcode.map(b => b.t), y: barcode.map(b => b.c), type: 'scatter', mode: 'lines', line: { shape: 'hv', color: '#a855f7' }, fill: 'tozeroy' };
+                Plotly.newPlot('barcode-plot', [trace], { title: 'Persistent Clusters (0-Homology)', paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'}, xaxis: { title: 'Distance Threshold (epsilon)' }, yaxis: { title: 'Connected Components' }, margin: { t: 30, b: 30, l: 30, r: 10 } }, {displayModeBar:false});
+            }
+            const specs = window.TopologyEngine.runSpecificationCurve(window.App.allTrials, window.App.currentOutcome);
+            if(specs.length) {
+                const trace = { x: specs.map(s => s.spec), y: specs.map(s => s.hr), type: 'bar', marker: { color: specs.map(s => s.hr < 1.0 ? '#10b981' : '#f43f5e') } };
+                Plotly.newPlot('spec-curve', [trace], { title: 'Avg Drug HR by Specification', paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'}, yaxis: { title: 'Hazard Ratio', range: [0.5, 1.2] }, margin: { t: 30, b: 60, l: 30, r: 10 }, shapes: [{ type: 'line', x0: -0.5, x1: specs.length-0.5, y0: 1, y1: 1, line: { color: 'white', dash: 'dot', width: 1 } }] }, {displayModeBar:false});
+            }
+            
+            // Gower's Distance Heatmap
+            const comps = [...new Set(window.App.allTrials.map(t => t.component))].filter(c => c!=='Other').sort();
+            if(comps.length > 2) {
+                const matrix = window.GeometryEngine.computeGowerMatrix(window.App.allTrials, comps);
+                const data = [{
+                    z: matrix,
+                    x: comps,
+                    y: comps,
+                    type: 'heatmap',
+                    colorscale: 'Viridis'
+                }];
+                Plotly.newPlot('transitivity-heatmap', data, {
+                      title: 'Gower Distance (Population Similarity)',
+                      paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'},
+                      margin: { t: 30, b: 30, l: 30, r: 10 }
+                }, {displayModeBar:false});
+            }
+        };
+
+        window.App.toggleCoreOnly = function(isOn) { window.App.coreOnly = !!isOn; window.App.updateUI(); };
+        
+        // --- 8. SIMULATION BRIDGE (Fixing the Missing Link) ---
+        window.App.runSimulation = function() {
+            if(!window.App.latestCNMA || window.App.latestCNMA.length === 0) {
+                alert("Please load data and ensure NMA results are available first.");
+                return;
+            }
+
+            const policyKey = document.getElementById('policy-select').value;
+            let policy;
+            if (policyKey === 'sq') {
+                policy = new Policy('Status Quo', [() => 'Placebo']);
+            } else if (policyKey === 'gdmt') {
+                policy = new Policy('Universal SGLT2i', [() => 'SGLT2i']);
+            } else {
+                policy = new Policy('Max Intensity', [() => 'ARNi', () => 'SGLT2i']);
+            }
+
+            // Create synthetic cohort bins based on demographics
+            const cohorts = [
+                { id: 'Young', features: [50, 0.3, 25, 2025], size: 5000 },
+                { id: 'Elderly', features: [80, 0.5, 45, 2025], size: 5000 }
+            ];
+
+            const results = window.WorldEngine.run(policy, cohorts, window.App.latestCNMA);
+            
+            // Visualization
+            const t = results.map(r => r.t);
+            
+            const traceStable = { x: t, y: results.map(r => r.totalStable), name: 'Stable HF', stackgroup: 'one', fillcolor: '#0ea5e9' };
+            const traceHosp = { x: t, y: results.map(r => r.totalHosp), name: 'Hospitalized', stackgroup: 'one', fillcolor: '#eab308' };
+            const traceDead = { x: t, y: results.map(r => r.totalDead), name: 'Dead', stackgroup: 'one', fillcolor: '#334155' };
+            
+            Plotly.newPlot('sim-plot-states', [traceStable, traceHosp, traceDead], {
+                title: 'Markov Trace', paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'},
+                xaxis: {title: 'Years'}, yaxis: {title: 'Population'}, margin: {t:30,l:40,r:10,b:30}
+            }, {displayModeBar:false});
+
+            const traceCost = { x: t, y: results.map(r => r.cumCost), name: 'Cum Cost', yaxis: 'y1', type: 'scatter', line: {color: '#f43f5e'} };
+            
+            Plotly.newPlot('sim-plot-cost', [traceCost], {
+                title: 'Economic Impact', paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'},
+                xaxis: {title: 'Years'}, yaxis: {title: 'Cost ($)'}, margin: {t:30,l:50,r:10,b:30}, showlegend: false
+            }, {displayModeBar:false});
+
+            const final = results[results.length-1];
+            document.getElementById('sim-qaly-total').innerText = `Total QALYs: ${final.cumQALY.toFixed(0)}`;
+            document.getElementById('sim-details').innerText = `Simulation complete for ${policy.name}. Final Cost: $${(final.cumCost/1000000).toFixed(1)}M.`;
+        };
+
+        window.App.updateUI = function() {
+            window.App.currentOutcome = document.getElementById('outcome-select').value;
+            window.App.hideCard(); 
+            window.App.data = window.App.allTrials.filter(t => t.outcomes.some(o => (o.id === window.App.currentOutcome || o.id === 'composite') && isFinite(o.hr) && isFinite(o.se)));
+            const activeAllTrials = window.App.coreOnly ? window.App.allTrials.filter(t => window.App.gdmtCoreSet.has(t.component)) : window.App.allTrials;
+            const activeData = window.App.coreOnly ? window.App.data.filter(t => window.App.gdmtCoreSet.has(t.component)) : window.App.data;
+            document.getElementById('trial-counter').innerText = `${activeAllTrials.length} Found / ${activeData.length} Analyzed`;
+            const nodes = activeAllTrials.map(t => ({ id: t.id, label: t.name, value: Math.sqrt(t.n), group: t.component, title: `${t.name}\n${t.component}\nN=${t.n}` }));
+            if(window.network) window.network.setData({nodes, edges: []});
+            
+            const cnma = window.StatsEngine.runCNMA(activeData, window.App.currentOutcome);
+            const tauEl = document.getElementById('tau-display');
+            if (cnma) {
+                window.App.latestCNMA = cnma;
+                if (tauEl) tauEl.innerText = `τ²: ${cnma[0].tau.toFixed(3)} (Min AIC)`;
+                const legendEl = document.getElementById('component-legend');
+                if (legendEl) {
+                    const counts = {}; cnma.forEach(r => { counts[r.component] = (counts[r.component] || 0) + 1; });
+                    const pieces = Object.entries(counts).sort((a, b) => b[1] - a[1]).map(([comp, n]) => {
+                        const style = window.COMPONENT_STYLES[comp] || window.COMPONENT_STYLES['Other'];
+                        const isHidden = window.App.hiddenComponents.has(comp);
+                        return `<button type="button" class="legend-chip ${isHidden ? 'legend-chip-muted' : ''}" data-comp="${comp}" style="color:${style.color || '#94a3b8'}"><span>${style.icon || '•'}</span> ${comp}: ${n}</button>`;
+                    });
+                    legendEl.innerHTML = pieces.join('<span class="text-slate-600"> · </span>');
+                }
+            } else { window.App.latestCNMA = []; if (tauEl) tauEl.innerText = 'τ²: --'; }
+
+            window.App.renderForestPlot();
+            if (cnma && cnma.length >= 2) {
+                const visibleCnma = cnma.filter(r => !window.App.hiddenComponents.has(r.component));
+                window.App.bayes = visibleCnma.length >= 2 ? window.BayesEngine.buildPosterior(visibleCnma, { draws: 3000, priorSD: 0.3 }) : null;
+            } else { window.App.bayes = null; }
+            window.App.renderLeagueTable();
+
+            const eggers = window.StatsEngine.runEggers(activeData, window.App.currentOutcome);
+            const pLabel = document.getElementById('egger-p');
+            if(eggers) {
+                pLabel.innerText = `P-Val: ${eggers.pValue.toFixed(3)}`;
+                pLabel.className = eggers.pValue < 0.05 ? "font-mono text-xs text-red-400 font-bold" : "font-mono text-xs text-emerald-400";
+                const valid = activeData.filter(t => t.outcomes.some(o=>o.id===window.App.currentOutcome || o.id==='composite'));
+                Plotly.newPlot('funnel-plot', [{ x: valid.map(t => { const o = t.outcomes.find(x=>x.id===window.App.currentOutcome || x.id==='composite'); return Math.log(o.hr); }), y: valid.map(t => { const o = t.outcomes.find(x=>x.id===window.App.currentOutcome || x.id==='composite'); return o.se; }), mode: 'markers', type: 'scatter', marker: {color: '#94a3b8'} }], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'}, xaxis:{title:'Log HR'}, yaxis:{title:'SE', autorange:'reversed'}, margin:{t:10, b:40, l:50, r:10} }, {displayModeBar:false});
+            } else { pLabel.innerText = "Insufficient Data"; }
+            
+            const interact = window.StatsEngine.runInteractionCheck(activeData, window.App.currentOutcome);
+            const iStat = document.getElementById('interaction-status');
+            if(interact.Q > 0) {
+                    iStat.innerHTML = `<span class="text-xl font-bold ${interact.p < 0.05 ? 'text-red-400':'text-emerald-400'}">Q=${interact.Q.toFixed(1)}</span><br><span class="text-xs">p=${interact.p.toFixed(3)} | I²=${interact.I2.toFixed(0)}%</span>`;
+            } else { iStat.innerText = "Insufficient Data"; }
+
+            window.App.updateGeometry(activeAllTrials);
+            window.App.renderExperimental();
+        };
+
+        window.App.updateGeometry = function(trialsOverride) {
+            window.App.hideCard(); 
+            const baseTrials = trialsOverride || ( window.App.coreOnly ? window.App.allTrials.filter(t => window.App.gdmtCoreSet.has(t.component)) : window.App.allTrials );
+            const geo = window.GeometryEngine.computePCA(baseTrials);
+            window.App.currentGeo = geo; 
+
+            if(geo.length) {
+                const colors = geo.map(g => window.COMPONENT_STYLES[g.cluster]?.color || '#64748b');
+                const baseTrace = { x: geo.map(g=>g.x), y: geo.map(g=>g.y), text: geo.map(g=>g.id), mode: 'markers', marker: {size: 8, color: colors, opacity: 0.7}, type: 'scatter', hoverinfo: 'text', name: 'Trials' };
+                const highlightTrace = { x: [], y: [], mode: 'markers', marker: {size: 16, color: '#10b981', line: {color: '#ffffff', width: 2}}, type: 'scatter', hoverinfo: 'none', name: 'Selected' };
+                Plotly.newPlot('geometry-plot', [baseTrace, highlightTrace], { paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'}, xaxis:{title:'PC1 (Patient Profile)'}, yaxis:{title:'PC2 (Trial Era)'}, margin:{t:10}, showlegend: false }, {displayModeBar:false});
+                const plotEl = document.getElementById('geometry-plot');
+                if (plotEl) {
+                    plotEl.on('plotly_click', (data) => {
+                        if(data.points && data.points[0]) {
+                            if (data.points[0].curveNumber === 0) {
+                                const pointIndex = data.points[0].pointIndex;
+                                const trialId = window.App.currentGeo[pointIndex].id;
+                                window.App.highlightTrial(trialId);
+                            }
+                        }
+                    });
+                }
+                const targetKey = document.getElementById('target-profile-select').value;
+                window.App.activeTarget = window.App.targetProfiles[targetKey];
+                document.getElementById('target-age-disp').innerText = `${window.App.activeTarget.features[0]} yrs`;
+                document.getElementById('target-ef-disp').innerText = `${window.App.activeTarget.features[2]} %`;
+                const list = document.getElementById('transport-list');
+                list.innerHTML = '';
+                const distances = geo.map(g => {
+                        const trial = baseTrials.find(t => t.id === g.id);
+                        return { id: g.id, name: trial ? trial.name : (PRETTY_NAMES[g.id] || g.id), dist: window.GeometryEngine.profileDistance(g.features, window.App.activeTarget.features), ageDiff: g.features[0] - window.App.activeTarget.features[0], cluster: g.cluster };
+                }).sort((a,b) => a.dist - b.dist);
+                distances.forEach(d => {
+                    const mismatchType = d.ageDiff > 10 ? "Much Older" : (d.ageDiff < -10 ? "Much Younger" : "Match");
+                    const style = window.COMPONENT_STYLES[d.cluster] || window.COMPONENT_STYLES['Other'];
+                    const el = document.createElement('div');
+                    el.id = `transport-item-${d.id}`;
+                    el.className = "flex justify-between p-2 bg-slate-800 rounded border border-slate-700 hover:bg-slate-700 transition cursor-pointer";
+                    el.title = `${mismatchType} (ΔAge: ${d.ageDiff.toFixed(1)} yrs)`;
+                    el.onclick = () => window.App.highlightTrial(d.id);
+                    el.innerHTML = `<span class="text-slate-400 text-[10px] flex items-center gap-2"><span style="color:${style.color}">${style.icon}</span> ${d.name}</span> <span class="font-mono text-[10px] ${d.dist < 1 ? 'text-emerald-400' : 'text-amber-400'}">${d.dist.toFixed(2)}</span>`;
+                    list.appendChild(el);
+                });
+            }
+        };
+
+        // --- 9. EXPORT ENGINE ---
+        window.ExportEngine = {
+            downloadCSV: () => {
+                // FIX: Ensure we use the full, unfiltered HFrEF universe for export
+                const data = window.App.allTrials; 
+                if(!data || !data.length) { window.Logger.log("No data to export.", "error"); return; }
+                let csv = "ID,Name,Component,N,Age,Sex,EF,Year,Outcome,HR,Lower,Upper\n";
+                data.forEach(t => {
+                    t.outcomes.forEach(o => {
+                        const safeName = (t.fullName || t.name).replace(/"/g, '""');
+                        csv += `${t.id},"${safeName}",${t.component},${t.n},${t.features[0]},${t.features[1]},${t.features[2]},${t.features[3]},${o.id},${o.hr},${o.lower},${o.upper}\n`;
+                    });
+                });
+                const blob = new Blob([csv], { type: 'text/csv' });
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a'); a.href = url; a.download = `metaflow_export_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+                window.URL.revokeObjectURL(url); window.Logger.log("Export started.", "success");
+            }
+        };
+
+        console.log("MetaFlow-HF scripts loaded successfully.");
+
+        // --- GLOBAL INIT ---
+        window.onload = () => {
+            try {
+                if (window.App && window.App.init) {
+                    window.App.init();
+                } else {
+                    console.error("App not ready");
+                }
+            } catch(e) {
+                console.error(e);
+                if(window.Logger) window.Logger.log("Startup Error: " + e.message, "error");
+            }
+        };
+
+    </script>
+</body>
+</html>

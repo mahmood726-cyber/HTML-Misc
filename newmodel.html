@@ -1,0 +1,461 @@
+import React, { useState, useEffect, useMemo } from 'react';
+import { 
+  Activity, 
+  Droplets, 
+  Heart, 
+  Wind, 
+  AlertTriangle, 
+  Scale, 
+  TrendingUp, 
+  Waves,
+  Stethoscope,
+  ShieldAlert,
+  Search,
+  Zap,
+  Sigma,
+  Database,
+  LayoutDashboard
+} from 'lucide-react';
+
+/**
+ * HYDRO-STORM | The Fluid Tolerance Simulator
+ * Based on ANDROMEDA-SHOCK, FENICE, and FEAST Trials
+ * Demonstrating the Frank-Starling Preload Paradox
+ */
+
+const Card = ({ children, className = "" }) => (
+  <div className={`bg-slate-900/60 border border-slate-700/50 backdrop-blur-md rounded-2xl p-6 ${className}`}>
+    {children}
+  </div>
+);
+
+const Badge = ({ children, color = "bg-slate-800 text-slate-400" }) => (
+  <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase tracking-widest border border-white/5 ${color}`}>
+    {children}
+  </span>
+);
+
+const Metric = ({ label, value, unit, color = "text-white", alert = false }) => (
+  <div className="flex flex-col">
+    <span className="text-[9px] uppercase font-bold text-slate-500 tracking-widest mb-1">{label}</span>
+    <div className="flex items-baseline gap-1">
+      <span className={`text-2xl font-black ${alert ? "text-rose-500 animate-pulse" : color} font-mono tracking-tighter`}>
+        {value}
+      </span>
+      <span className="text-[10px] text-slate-600 font-bold uppercase">{unit}</span>
+    </div>
+  </div>
+);
+
+// --- Plots for Logic Tab ---
+const MiniPlot = ({ data, color = "#6366f1", label }) => {
+  const height = 100;
+  const width = 200;
+  const maxVal = Math.max(...data.map(d => d.y));
+  
+  return (
+    <div className="flex flex-col items-center w-full">
+      <div className="relative border-b border-l border-slate-700/50 h-[120px] w-full flex items-end p-2">
+        <svg viewBox={`0 0 ${width} ${height}`} className="w-full h-full overflow-visible">
+           <path 
+             d={`M ${data.map((d, i) => `${(d.x / 100) * width},${height - (d.y / maxVal) * height}`).join(' L ')}`}
+             fill="none"
+             stroke={color}
+             strokeWidth="2"
+             strokeLinecap="round"
+           />
+        </svg>
+      </div>
+      <span className="text-[9px] uppercase tracking-widest text-slate-500 mt-2 font-bold">{label}</span>
+    </div>
+  );
+};
+
+export default function App() {
+  const [activeTab, setActiveTab] = useState('sim');
+  
+  // --- Simulation State ---
+  const [fluidAdministered, setFluidAdministered] = useState(0); // mL cumulative
+  const [contractility, setContractility] = useState(40); // EF% (30=Shock, 60=Normal)
+  const [vasopressor, setVasopressor] = useState(0); // mcg/min (0-50)
+
+  // --- Physiology Engine (The Frank-Starling Model) ---
+
+  // 1. Preload (LVEDP equivalent)
+  // Increases linearly with fluid, but reduced by capillary leak if congestion is high
+  const preload = useMemo(() => {
+    return 5 + (fluidAdministered / 250); // mmHg (Starts at 5, increases by 4 per liter)
+  }, [fluidAdministered]);
+
+  // 2. Stroke Volume (The Starling Curve)
+  // SV = SVI_max * (1 - e^(-k * preload))
+  // k is determined by Contractility (EF)
+  const strokeVolume = useMemo(() => {
+    const maxSV = contractility * 1.5; // Theoretical max based on heart strength
+    const curvature = contractility / 800; // Weak heart = flatter curve
+    const sv = maxSV * (1 - Math.exp(-curvature * preload));
+    return Math.max(20, sv);
+  }, [contractility, preload]);
+
+  // 3. Cardiac Output & MAP
+  const cardiacOutput = (strokeVolume * 90) / 1000; // Fixed HR 90 for simplicity
+  const svr = 800 + (vasopressor * 50); // Vasopressors squeeze pipes
+  const map = (cardiacOutput * svr) / 80;
+
+  // 4. The Harm: Pulmonary Edema (Extravascular Lung Water)
+  // Occurs when Preload (Hydrostatic Pressure) exceeds oncotic pressure safety margin
+  // Weak hearts tolerate fluid poorly (Backpressure)
+  const lungWater = useMemo(() => {
+    const threshold = 18; // mmHg LVEDP danger zone
+    if (preload < threshold) return 0;
+    // Exponential flooding once threshold crossed
+    return Math.pow(preload - threshold, 1.8) * 10; 
+  }, [preload]);
+
+  const oxygenation = Math.max(60, 98 - (lungWater / 5));
+
+  // --- Visuals ---
+
+  const StarlingViz = () => {
+    // Generate Curve Points based on current Contractility
+    const points = Array.from({length: 40}).map((_, i) => {
+      const p = i * 1; // Preload x-axis
+      const maxSV = contractility * 1.5;
+      const k = contractility / 800;
+      const sv = maxSV * (1 - Math.exp(-k * p));
+      return { x: p, y: sv };
+    });
+
+    // Current Patient Position
+    const currentX = (preload / 40) * 100; // Scale to SVG width
+    const currentY = (strokeVolume / 100) * 100; // Scale to SVG height
+
+    return (
+      <div className="relative h-48 w-full border-l border-b border-slate-600 bg-slate-900/30 rounded-tr-lg p-2 overflow-hidden">
+        <svg viewBox="0 0 100 100" className="w-full h-full overflow-visible">
+          {/* The Curve */}
+          <path 
+            d={`M 0,100 L ${points.map(pt => `${(pt.x/40)*100},${100 - (pt.y/100)*100}`).join(' L ')}`}
+            fill="none"
+            stroke={contractility < 45 ? "#fb7185" : "#34d399"} // Red curve if Heart Failure, Green if normal
+            strokeWidth="3"
+            strokeLinecap="round"
+          />
+          {/* Patient Dot */}
+          <circle 
+            cx={currentX} 
+            cy={100 - currentY} 
+            r="4" 
+            fill="white" 
+            className="drop-shadow-[0_0_10px_white]"
+          />
+          {/* Dashed lines to axis */}
+          <line x1={currentX} y1={100 - currentY} x2={currentX} y2={100} stroke="white" strokeDasharray="3 3" opacity="0.3" />
+          <line x1={currentX} y1={100 - currentY} x2={0} y2={100 - currentY} stroke="white" strokeDasharray="3 3" opacity="0.3" />
+        </svg>
+        <div className="absolute bottom-2 right-2 text-[10px] text-slate-500 font-bold uppercase">Preload (Volume)</div>
+        <div className="absolute top-2 left-2 text-[10px] text-slate-500 font-bold uppercase">Stroke Volume</div>
+      </div>
+    );
+  };
+
+  const LungsViz = () => {
+    // Opacity increases with edema
+    const edemaOpacity = Math.min(100, lungWater) / 100;
+    
+    return (
+      <div className="relative h-32 w-24 mx-auto flex items-center justify-center">
+        {/* Lung Outline (Abstract) */}
+        <div className="w-full h-full bg-slate-800 rounded-2xl flex overflow-hidden relative border border-slate-700">
+           {/* Normal Tissue */}
+           <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-20"></div>
+           
+           {/* Fluid Level (Filling up) */}
+           <div 
+             className="absolute bottom-0 left-0 right-0 bg-blue-500 transition-all duration-1000 ease-out"
+             style={{ height: `${edemaOpacity * 100}%`, opacity: 0.6 }}
+           />
+           
+           {/* Bubbles if flooding */}
+           {lungWater > 20 && (
+             <div className="absolute inset-0 animate-pulse bg-white/10" />
+           )}
+        </div>
+        <div className="absolute -bottom-6 text-[9px] font-black uppercase tracking-widest text-slate-500 text-center w-full">
+           EVLW Index
+        </div>
+      </div>
+    );
+  };
+
+  // --- Logic Data ---
+  const starlingData = useMemo(() => Array.from({length: 20}, (_, i) => ({ x: i*5, y: (contractility * 1.5) * (1 - Math.exp(-(contractility/800) * i)) })), [contractility]);
+  const congestionData = useMemo(() => Array.from({length: 20}, (_, i) => {
+      const p = i * 2; // preload
+      const edema = p < 18 ? 0 : Math.pow(p - 18, 1.8) * 10;
+      return { x: p, y: edema };
+  }), []);
+
+  return (
+    <div className="flex flex-col h-screen bg-[#0f172a] text-slate-300 font-sans overflow-hidden">
+      
+      {/* HEADER */}
+      <header className="h-16 bg-slate-900/80 backdrop-blur-xl border-b border-blue-500/10 px-6 flex items-center justify-between z-50 shrink-0">
+        <div className="flex items-center gap-4">
+          <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center shadow-[0_0_20px_rgba(37,99,235,0.3)]">
+            <Waves className="text-white w-6 h-6" />
+          </div>
+          <div>
+            <h1 className="text-xl font-black text-white tracking-widest uppercase">HYDRO<span className="text-blue-500">-STORM</span></h1>
+            <p className="text-[10px] font-mono text-blue-400">FLUID TOLERANCE SIMULATOR</p>
+          </div>
+        </div>
+        
+        <div className="flex gap-2">
+           <button onClick={() => setActiveTab('sim')} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase flex items-center gap-2 ${activeTab === 'sim' ? 'bg-blue-600 text-white' : 'hover:text-white'}`}><LayoutDashboard className="w-3 h-3"/> Sim</button>
+           <button onClick={() => setActiveTab('logic')} className={`px-4 py-2 rounded-lg text-xs font-bold uppercase flex items-center gap-2 ${activeTab === 'logic' ? 'bg-blue-600 text-white' : 'hover:text-white'}`}><Sigma className="w-3 h-3"/> Logic</button>
+        </div>
+      </header>
+
+      <main className="flex-1 flex overflow-hidden">
+        
+        {/* LEFT: CONTROLS */}
+        <aside className="w-80 bg-slate-950 border-r border-slate-800 p-6 flex flex-col gap-6 z-10 shrink-0 overflow-y-auto">
+          
+          <div className="space-y-4">
+            <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+               <Heart className="w-4 h-4 text-rose-500" /> Cardiac Status
+            </h3>
+            <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
+               <div className="flex justify-between mb-2">
+                 <span className="text-[10px] font-bold uppercase text-slate-500">Ejection Fraction</span>
+                 <span className={`text-xs font-mono font-bold ${contractility < 40 ? 'text-rose-500' : 'text-emerald-400'}`}>{contractility}%</span>
+               </div>
+               <input 
+                 type="range" min="15" max="65" value={contractility} 
+                 onChange={(e) => setContractility(parseInt(e.target.value))}
+                 className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-rose-500"
+               />
+               <p className="mt-2 text-[10px] text-slate-500">Low EF flattens the Starling curve, making the patient <span className="text-rose-400">Fluid Intolerant</span>.</p>
+            </div>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+               <Droplets className="w-4 h-4 text-blue-500" /> Fluid Resuscitation
+            </h3>
+            
+            <div className="grid grid-cols-2 gap-2">
+               <button 
+                 onClick={() => setFluidAdministered(prev => prev + 250)}
+                 className="bg-blue-500/10 border border-blue-500/50 hover:bg-blue-500 hover:text-white text-blue-400 p-3 rounded-lg text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1"
+               >
+                 <span className="text-lg">+250ml</span>
+                 <span>Bolus</span>
+               </button>
+               <button 
+                 onClick={() => setFluidAdministered(prev => prev + 500)}
+                 className="bg-blue-500/10 border border-blue-500/50 hover:bg-blue-500 hover:text-white text-blue-400 p-3 rounded-lg text-[10px] font-black uppercase transition-all flex flex-col items-center gap-1"
+               >
+                 <span className="text-lg">+500ml</span>
+                 <span>Rapid</span>
+               </button>
+            </div>
+            
+            <div className="bg-slate-900 p-4 rounded-xl border border-slate-800 flex justify-between items-center">
+               <span className="text-[10px] font-bold uppercase text-slate-500">Total Volume</span>
+               <span className="text-xl font-mono font-black text-blue-400">{fluidAdministered}<span className="text-xs text-slate-600 ml-1">mL</span></span>
+            </div>
+
+            <button onClick={() => setFluidAdministered(0)} className="w-full py-2 border border-slate-700 text-slate-500 text-[9px] font-bold uppercase rounded hover:bg-slate-800 hover:text-white transition-all">Diurese (Reset)</button>
+          </div>
+
+          <div className="space-y-4">
+             <h3 className="text-xs font-black text-white uppercase tracking-widest flex items-center gap-2">
+               <Zap className="w-4 h-4 text-amber-500" /> Vasoactive Support
+             </h3>
+             <div className="bg-slate-900 rounded-xl p-4 border border-slate-800">
+                <div className="flex justify-between mb-2">
+                   <span className="text-[10px] font-bold uppercase text-slate-500">Norepinephrine</span>
+                   <span className="text-xs font-mono font-bold text-amber-400">{vasopressor} mcg/min</span>
+                </div>
+                <input 
+                 type="range" min="0" max="30" value={vasopressor} 
+                 onChange={(e) => setVasopressor(parseInt(e.target.value))}
+                 className="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-500"
+               />
+             </div>
+          </div>
+          
+        </aside>
+
+        {/* CENTER: SIMULATION */}
+        {activeTab === 'sim' && (
+        <div className="flex-1 p-8 overflow-y-auto no-scrollbar relative flex flex-col gap-6">
+          
+          {/* Top Row: The Curve & Lungs */}
+          <div className="grid grid-cols-12 gap-6 h-80">
+             {/* The Starling Curve Viz */}
+             <div className="col-span-8 bg-slate-900/50 border border-slate-700 rounded-2xl p-6 flex flex-col relative overflow-hidden">
+                <div className="flex justify-between items-start mb-4 relative z-10">
+                   <div>
+                     <h2 className="text-lg font-black text-white uppercase tracking-widest flex items-center gap-2">
+                       <TrendingUp className="w-5 h-5 text-emerald-400" /> Frank-Starling Curve
+                     </h2>
+                     <p className="text-[10px] text-slate-500 font-mono">Stroke Volume vs. Preload Status</p>
+                   </div>
+                   <div className="flex flex-col items-end">
+                      <Badge color={preload > 20 ? "bg-rose-500/20 text-rose-400 border-rose-500/20" : "bg-emerald-500/20 text-emerald-400 border-emerald-500/20"}>
+                        {preload > 20 ? "FLUID TOLERANCE EXCEEDED" : "FLUID RESPONSIVE ZONE"}
+                      </Badge>
+                   </div>
+                </div>
+                <div className="flex-1 relative z-10">
+                   <StarlingViz />
+                </div>
+                {/* Background glow based on status */}
+                <div className={`absolute top-0 right-0 w-64 h-64 rounded-full blur-3xl opacity-10 pointer-events-none ${preload > 20 ? 'bg-rose-500' : 'bg-emerald-500'}`} />
+             </div>
+
+             {/* The Lungs (Edema Viz) */}
+             <div className="col-span-4 bg-slate-900/50 border border-slate-700 rounded-2xl p-6 flex flex-col items-center justify-center relative">
+                <div className="absolute top-4 left-4 flex items-center gap-2">
+                   <Wind className="w-4 h-4 text-sky-400" />
+                   <span className="text-[10px] font-black text-slate-500 uppercase">Pulmonary Status</span>
+                </div>
+                <LungsViz />
+                {lungWater > 50 && (
+                   <div className="absolute bottom-4 bg-rose-500 text-white px-3 py-1 rounded text-[10px] font-black uppercase tracking-widest animate-pulse">
+                     PULMONARY EDEMA
+                   </div>
+                )}
+             </div>
+          </div>
+
+          {/* Bottom Row: Hemodynamics */}
+          <div className="grid grid-cols-3 gap-6">
+             <Card className="flex items-center gap-4">
+                <div className={`p-3 rounded-xl ${map < 65 ? 'bg-rose-500/10 text-rose-500' : 'bg-emerald-500/10 text-emerald-500'}`}>
+                   <Activity className="w-6 h-6" />
+                </div>
+                <Metric 
+                  label="Mean Arterial Pressure" 
+                  value={map.toFixed(0)} 
+                  unit="mmHg" 
+                  color={map < 65 ? "text-rose-500" : "text-emerald-400"}
+                  alert={map < 65}
+                />
+             </Card>
+
+             <Card className="flex items-center gap-4">
+                <div className={`p-3 rounded-xl ${strokeVolume < 35 ? 'bg-amber-500/10 text-amber-500' : 'bg-blue-500/10 text-blue-500'}`}>
+                   <Heart className="w-6 h-6" />
+                </div>
+                <Metric 
+                  label="Stroke Volume" 
+                  value={strokeVolume.toFixed(0)} 
+                  unit="mL" 
+                  color={strokeVolume < 35 ? "text-amber-500" : "text-white"}
+                />
+             </Card>
+
+             <Card className="flex items-center gap-4">
+                <div className={`p-3 rounded-xl ${oxygenation < 90 ? 'bg-rose-500/10 text-rose-500' : 'bg-sky-500/10 text-sky-500'}`}>
+                   <Wind className="w-6 h-6" />
+                </div>
+                <Metric 
+                  label="Oxygen Saturation" 
+                  value={oxygenation.toFixed(0)} 
+                  unit="%" 
+                  color={oxygenation < 90 ? "text-rose-500" : "text-sky-400"}
+                  alert={oxygenation < 85}
+                />
+             </Card>
+          </div>
+
+          {/* Diagnosis / Alert Panel */}
+          <div className={`p-6 rounded-2xl border flex items-start gap-4 transition-all duration-500 ${preload > 22 ? 'bg-rose-950/30 border-rose-500/50' : 'bg-slate-900 border-slate-800'}`}>
+             <ShieldAlert className={`w-8 h-8 ${preload > 22 ? 'text-rose-500' : 'text-slate-600'}`} />
+             <div>
+                <h3 className={`text-sm font-black uppercase tracking-widest mb-1 ${preload > 22 ? 'text-white' : 'text-slate-400'}`}>
+                   {preload > 22 ? "CRITICAL: The Preload Paradox" : "Hemodynamic Status"}
+                </h3>
+                <p className="text-xs text-slate-400 leading-relaxed">
+                   {preload > 22 
+                     ? "You have pushed the patient onto the 'Flat Part' of the Starling Curve. Additional fluid is NOT increasing Stroke Volume (Responsive: NO) but IS causing hydrostatic pulmonary edema. STOP FLUIDS. Consider Inotropes or Vasopressors."
+                     : "Patient is currently on the ascending limb of the Starling Curve. Fluid may recruit stroke volume, but monitor closely for the inflection point."
+                   }
+                </p>
+             </div>
+          </div>
+          
+        </div>
+        )}
+
+        {/* LOGIC TAB */}
+        {activeTab === 'logic' && (
+          <div className="flex-1 p-10 overflow-y-auto no-scrollbar">
+             <div className="max-w-4xl mx-auto space-y-8">
+                <div className="border-b border-slate-800 pb-6 mb-6">
+                   <h2 className="text-2xl font-black text-white uppercase tracking-widest flex items-center gap-3">
+                      <Sigma className="w-6 h-6 text-blue-500" /> Mathematical Model
+                   </h2>
+                   <p className="text-sm text-slate-500 font-mono mt-2">The equations driving the HYDRO-STORM engine.</p>
+                </div>
+
+                <div className="grid grid-cols-2 gap-8">
+                   <Card>
+                      <h3 className="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                         <TrendingUp className="w-4 h-4 text-emerald-400" /> Starling Equation
+                      </h3>
+                      <MiniPlot data={starlingData} color="#34d399" label="SV vs Preload" />
+                      <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 font-mono text-[10px] text-slate-400 mt-4 overflow-x-auto">
+                         SV = MaxSV * (1 - e^(-k * Preload))
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                         Stroke Volume increases with Preload (Volume) exponentially, but plateaus. The 'k' constant is determined by Contractility (EF). Weak hearts plateau much earlier (Fluid Intolerance).
+                      </p>
+                   </Card>
+
+                   <Card>
+                      <h3 className="text-xs font-black text-white uppercase tracking-widest mb-4 flex items-center gap-2">
+                         <Wind className="w-4 h-4 text-sky-400" /> Congestion Model
+                      </h3>
+                      <MiniPlot data={congestionData} color="#38bdf8" label="Edema vs Preload" />
+                      <div className="bg-slate-950 p-4 rounded-lg border border-slate-800 font-mono text-[10px] text-slate-400 mt-4 overflow-x-auto">
+                         Edema = Preload &gt; 18 ? (Preload - 18)^1.8 : 0
+                      </div>
+                      <p className="text-[10px] text-slate-500 mt-2 leading-relaxed">
+                         Once hydrostatic pressure (Preload) exceeds oncotic pressure (~18mmHg), fluid transudes into the alveoli exponentially. This is the "cliffs edge" of fluid resuscitation.
+                      </p>
+                   </Card>
+                </div>
+
+                <div className="grid grid-cols-2 gap-6">
+                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                      <div className="flex items-center gap-2 mb-4 text-blue-400">
+                         <Database className="w-5 h-5" />
+                         <span className="text-xs font-black uppercase tracking-widest">ANDROMEDA-SHOCK (2019)</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-relaxed">
+                         Demonstrated that guiding resuscitation by <strong>peripheral perfusion</strong> (CRT) resulted in less fluid, less organ dysfunction, and better outcomes compared to lactate-guided strategies which often promote fluid overload.
+                      </p>
+                   </div>
+                   <div className="bg-slate-900 border border-slate-800 rounded-xl p-6">
+                      <div className="flex items-center gap-2 mb-4 text-rose-400">
+                         <ShieldAlert className="w-5 h-5" />
+                         <span className="text-xs font-black uppercase tracking-widest">FEAST Trial (2011)</span>
+                      </div>
+                      <p className="text-[10px] text-slate-400 leading-relaxed">
+                         In African children with severe infection, fluid boluses <strong>increased mortality</strong> (10.6% vs 7.3%) due to cardiovascular collapse (fluid overload), challenging the "bolus everyone" dogma.
+                      </p>
+                   </div>
+                </div>
+             </div>
+          </div>
+        )}
+
+      </main>
+    </div>
+  );
+}

@@ -1,0 +1,1785 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Safety Risk Engine</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Updated Font to Poppins for the Glassmorphic look */
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+        
+        body { 
+            font-family: 'Poppins', sans-serif; 
+            background-color: #0f172a;
+            background-image: 
+                radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 0%, rgba(232, 121, 249, 0.15) 0px, transparent 50%),
+                radial-gradient(at 100% 100%, rgba(99, 102, 241, 0.15) 0px, transparent 50%);
+            background-attachment: fixed;
+            color: #e2e8f0;
+        }
+
+        /* Glassmorphism Classes */
+        .glass-panel {
+            background: rgba(30, 41, 59, 0.7);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.3);
+        }
+
+        .glass-input {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            color: white;
+        }
+        .glass-input:focus {
+            outline: none;
+            border-color: rgba(56, 189, 248, 0.5);
+            background: rgba(15, 23, 42, 0.8);
+        }
+
+        .slider-thumb::-webkit-slider-thumb { 
+            -webkit-appearance: none; 
+            appearance: none; 
+            width: 16px; 
+            height: 16px; 
+            background: #22d3ee; 
+            border-radius: 50%; 
+            cursor: pointer; 
+            box-shadow: 0 0 10px rgba(34, 211, 238, 0.5);
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+    </style>
+</head>
+<body class="min-h-screen">
+
+<!-- Language Picker Modal -->
+<div id="lang_modal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div class="glass-panel rounded-3xl p-8 max-w-md w-full mx-4 transform scale-100">
+        <div class="text-center mb-6">
+            <div class="text-5xl mb-4">🌍</div>
+            <h2 class="text-2xl font-bold text-white mb-2">Select Language</h2>
+            <p class="text-slate-400 text-sm">Choose your preferred language</p>
+        </div>
+        <div class="grid grid-cols-1 gap-3">
+            <button onclick="setLanguage('en')" class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-500/30 transition-all group">
+                <span class="text-3xl">🇬🇧</span>
+                <div class="text-left">
+                    <div class="font-semibold text-white group-hover:text-cyan-300">English</div>
+                    <div class="text-xs text-slate-500">English</div>
+                </div>
+            </button>
+            <button onclick="setLanguage('fr')" class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-500/30 transition-all group">
+                <span class="text-3xl">🇫🇷</span>
+                <div class="text-left">
+                    <div class="font-semibold text-white group-hover:text-cyan-300">Francais</div>
+                    <div class="text-xs text-slate-500">French</div>
+                </div>
+            </button>
+            <button onclick="setLanguage('es')" class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-500/30 transition-all group">
+                <span class="text-3xl">🇪🇸</span>
+                <div class="text-left">
+                    <div class="font-semibold text-white group-hover:text-cyan-300">Espanol</div>
+                    <div class="text-xs text-slate-500">Spanish</div>
+                </div>
+            </button>
+            <button onclick="setLanguage('ar')" class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-500/30 transition-all group">
+                <span class="text-3xl">🇸🇦</span>
+                <div class="text-left">
+                    <div class="font-semibold text-white group-hover:text-cyan-300">العربية</div>
+                    <div class="text-xs text-slate-500">Arabic</div>
+                </div>
+            </button>
+            <button onclick="setLanguage('pt')" class="flex items-center gap-4 p-4 rounded-xl bg-white/5 hover:bg-cyan-500/20 border border-white/10 hover:border-cyan-500/30 transition-all group">
+                <span class="text-3xl">🇧🇷</span>
+                <div class="text-left">
+                    <div class="font-semibold text-white group-hover:text-cyan-300">Portugues</div>
+                    <div class="text-xs text-slate-500">Portuguese</div>
+                </div>
+            </button>
+        </div>
+    </div>
+</div>
+
+
+
+<div class="max-w-7xl mx-auto p-4 md:p-8">
+    
+    <!-- Header -->
+    <header class="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-bold text-white tracking-tight drop-shadow-sm flex items-center">
+                Water Safety Risk Engine
+                <span class="text-xs font-medium text-cyan-300 bg-cyan-900/30 border border-cyan-500/30 px-2 py-1 rounded ml-3">v1.2.0</span>
+                <span style="font-size: 11px; font-weight: 400; opacity: 0.7; margin-left: 8px;">by Najia Ahmad</span>
+            </h1>
+        </div>
+        <div class="flex gap-3 flex-wrap">
+             <button onclick="exportData()" class="glass-panel hover:bg-white/10 text-emerald-300 px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 border border-emerald-500/20 text-sm" title="Export Assessment">
+                <i class="fas fa-download"></i> <span data-i18n="export">Export</span>
+             </button>
+             <button onclick="document.getElementById('photo_input').click()" class="glass-panel hover:bg-white/10 text-amber-300 px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 border border-amber-500/20 text-sm" title="Add Photo">
+                <i class="fas fa-camera"></i>
+             </button>
+             <input type="file" id="photo_input" accept="image/*" capture="environment" class="hidden" onchange="handlePhoto(event)">
+             <button onclick="resampleRisk()" class="glass-panel hover:bg-white/10 text-purple-300 px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 border border-purple-500/20 text-sm">
+                <i class="fas fa-dice"></i> <span data-i18n="resample">Resample</span>
+             </button>
+             <button onclick="runTests()" class="glass-panel hover:bg-white/10 text-cyan-300 px-4 py-2 rounded-lg font-medium transition flex items-center gap-2 border border-cyan-500/20 text-sm">
+                <i class="fas fa-vial"></i> <span data-i18n="runVerification">Run Verification</span>
+             </button>
+             <button onclick="resetInputs()" class="glass-panel hover:bg-white/10 text-slate-300 px-4 py-2 rounded-lg font-medium transition text-sm" data-i18n="reset">
+                Reset
+             </button>
+             <button onclick="showLanguagePicker()" class="glass-panel hover:bg-white/10 text-slate-300 px-3 py-2 rounded-lg font-medium transition text-sm" title="Change Language">
+                <i class="fas fa-globe"></i> <span id="current_lang_flag">🇬🇧</span>
+             </button>
+        </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+        
+        <!-- Left Column: Inputs -->
+        <div class="lg:col-span-4 space-y-6">
+            
+            <!-- Source Type -->
+            <div class="glass-panel p-5 rounded-2xl">
+                <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-faucet text-cyan-400"></i> Source & Vulnerability
+                </h3>
+                <div class="space-y-5">
+                    <div>
+                        <label class="block text-xs font-medium text-slate-400 uppercase tracking-wider mb-2">Source Type</label>
+                        <select id="source_type" class="w-full glass-input rounded-lg p-2.5 text-sm transition-colors" onchange="updateUI()">
+                            <option value="piped_chlorinated">Piped (Chlorinated)</option>
+                            <option value="protected_borehole">Protected Borehole</option>
+                            <option value="protected_well">Protected Well</option>
+                            <option value="rainwater">Rainwater Catchment</option>
+                            <option value="unprotected_borehole">Unprotected Borehole</option>
+                            <option value="unprotected_well">Unprotected Well</option>
+                            <option value="surface_water">Surface Water (River/Dam)</option>
+                        </select>
+                    </div>
+                    
+                    <div class="flex items-center justify-between p-1">
+                        <span class="text-sm text-slate-300">Household Vulnerable?</span>
+                        <label class="relative inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="is_vulnerable" class="sr-only peer" onchange="updateUI()">
+                            <div class="w-11 h-6 bg-slate-700 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-cyan-500 shadow-inner"></div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Environmental -->
+            <div class="glass-panel p-5 rounded-2xl">
+                <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-cloud-showers-heavy text-blue-400"></i> Environment
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition">
+                        <span class="text-sm text-slate-300">Heavy Rain (Last 5 days)</span>
+                        <input type="checkbox" id="heavy_rain" class="w-5 h-5 rounded border-slate-600 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900 bg-slate-800" onchange="updateUI()">
+                    </div>
+                    <div class="flex items-center justify-between p-2 rounded-lg hover:bg-white/5 transition">
+                        <span class="text-sm text-slate-300">Flooding (Last 5 days)</span>
+                        <input type="checkbox" id="flooding" class="w-5 h-5 rounded border-slate-600 text-cyan-500 focus:ring-cyan-500 focus:ring-offset-slate-900 bg-slate-800" onchange="updateUI()">
+                    </div>
+                    
+                    <div class="pt-4 border-t border-white/10">
+                        <div class="flex justify-between mb-2">
+                            <label class="text-xs font-medium text-slate-400 uppercase">Hours Since Event</label>
+                            <span id="hours_display" class="text-xs font-mono text-cyan-300 bg-cyan-900/30 px-2 py-0.5 rounded border border-cyan-500/20">N/A</span>
+                        </div>
+                        <input type="range" id="hours_since" min="0" max="130" value="12" disabled 
+                               class="w-full h-1.5 bg-slate-700 rounded-lg appearance-none cursor-pointer disabled:opacity-30"
+                               oninput="updateUI()">
+                        <div class="flex justify-between text-[10px] text-slate-500 mt-2 font-mono">
+                            <span>0h</span>
+                            <span>36h (τ)</span>
+                            <span>120h (Max)</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Location & Bacteria -->
+            <div class="glass-panel p-5 rounded-2xl">
+                <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-map-marker-alt text-rose-400"></i> Your Location
+                </h3>
+                <div class="space-y-4">
+                    <div class="flex gap-2">
+                        <button onclick="detectLocation()" class="flex-1 glass-input hover:bg-white/10 text-cyan-300 px-3 py-2 rounded-lg text-sm transition flex items-center justify-center gap-2">
+                            <i class="fas fa-location-crosshairs"></i> Detect
+                        </button>
+                        <select id="region_select" class="flex-1 glass-input rounded-lg p-2 text-sm" onchange="updateBacteria()">
+                            <option value="">Select Region...</option>
+                            <option value="south_asia">South Asia</option>
+                            <option value="sub_saharan_africa">Sub-Saharan Africa</option>
+                            <option value="southeast_asia">Southeast Asia</option>
+                            <option value="latin_america">Latin America</option>
+                            <option value="middle_east">Middle East / N. Africa</option>
+                            <option value="east_asia">East Asia</option>
+                            <option value="europe">Europe</option>
+                            <option value="north_america">North America</option>
+                            <option value="oceania">Oceania</option>
+                        </select>
+                    </div>
+                    <div id="location_status" class="text-xs text-slate-500 text-center hidden">
+                        <i class="fas fa-spinner fa-spin"></i> Detecting location...
+                    </div>
+                    <div id="detected_location" class="text-xs text-cyan-400 text-center hidden"></div>
+                </div>
+            </div>
+
+            <!-- Observations (Grouped) -->
+            <div class="glass-panel p-5 rounded-2xl">
+                <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-eye text-purple-400"></i> Observations
+                </h3>
+                
+                <div class="space-y-5">
+                    <!-- Standard -->
+                    <div class="space-y-2 border-b border-white/10 pb-4">
+                        <label class="flex items-center gap-3 cursor-pointer group p-1">
+                            <input type="checkbox" id="turbidity_visible" class="w-4 h-4 rounded border-slate-600 text-purple-500 focus:ring-purple-500 focus:ring-offset-slate-900 bg-slate-800" onchange="updateUI()">
+                            <span class="text-sm text-slate-300 group-hover:text-white transition">Turbidity Visible</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group p-1">
+                            <input type="checkbox" id="smell_or_taste_change" class="w-4 h-4 rounded border-slate-600 text-purple-500 focus:ring-purple-500 focus:ring-offset-slate-900 bg-slate-800" onchange="updateUI()">
+                            <span class="text-sm text-slate-300 group-hover:text-white transition">Smell/Taste Change</span>
+                        </label>
+                    </div>
+
+                    <!-- Exclusive Groups -->
+                    <div class="bg-black/20 p-4 rounded-xl space-y-3 border border-white/5">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Latrine Distance</p>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="latrine" value="none" checked onchange="updateUI()" class="text-cyan-500 bg-slate-800 border-slate-600 focus:ring-offset-slate-900">
+                            <span class="text-sm text-slate-400">Safe Distance (>30m)</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="latrine" value="10_to_30" id="latrine_10_to_30m" onchange="updateUI()" class="text-cyan-500 bg-slate-800 border-slate-600 focus:ring-offset-slate-900">
+                            <span class="text-sm text-slate-300">10m - 30m</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="latrine" value="under_10" id="latrine_under_10m" onchange="updateUI()" class="text-cyan-500 bg-slate-800 border-slate-600 focus:ring-offset-slate-900">
+                            <span class="text-sm text-white font-medium">Under 10m (High Risk)</span>
+                        </label>
+                    </div>
+
+                    <div class="bg-black/20 p-4 rounded-xl space-y-3 border border-white/5">
+                        <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Storage Duration</p>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="storage" value="none" checked onchange="updateUI()" class="text-cyan-500 bg-slate-800 border-slate-600 focus:ring-offset-slate-900">
+                            <span class="text-sm text-slate-400">Fresh / Covered</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="storage" value="24h" id="storage_uncovered_over_24h" onchange="updateUI()" class="text-cyan-500 bg-slate-800 border-slate-600 focus:ring-offset-slate-900">
+                            <span class="text-sm text-slate-300">Uncovered > 24h</span>
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="radio" name="storage" value="48h" id="storage_uncovered_over_48h" onchange="updateUI()" class="text-cyan-500 bg-slate-800 border-slate-600 focus:ring-offset-slate-900">
+                            <span class="text-sm text-white font-medium">Uncovered > 48h</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Results -->
+        <div class="lg:col-span-8 space-y-6">
+            
+            <!-- Main Score Card -->
+            <div class="glass-panel rounded-2xl overflow-hidden relative">
+                <!-- Background decoration -->
+                <div class="absolute top-0 right-0 w-64 h-64 bg-cyan-500/10 rounded-full blur-3xl -mr-16 -mt-16 pointer-events-none"></div>
+
+                <div class="p-6 border-b border-white/10 flex justify-between items-center relative z-10">
+                    <h2 class="text-lg font-bold text-white">Risk Assessment Result</h2>
+                    <span id="risk_badge" class="px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg backdrop-blur-md">
+                        Calculating...
+                    </span>
+                </div>
+                
+                <div class="p-8 grid grid-cols-1 md:grid-cols-2 gap-10 relative z-10">
+                    <!-- Gauge / Score -->
+                    <div class="flex flex-col items-center justify-center text-center">
+                         <div class="relative w-56 h-28 mb-4">
+                            <!-- Simple Half Donut SVG -->
+                            <svg viewBox="0 0 100 50" class="w-full h-full transform overflow-visible">
+                                <path d="M 10 50 A 40 40 0 0 1 90 50" fill="none" stroke="rgba(255,255,255,0.1)" stroke-width="8" stroke-linecap="round" />
+                                <path id="gauge_arc" d="M 10 50 A 40 40 0 0 1 10 50" fill="none" stroke="#22d3ee" stroke-width="8" stroke-linecap="round" class="transition-all duration-700 ease-out drop-shadow-[0_0_10px_rgba(34,211,238,0.5)]" />
+                                <text x="50" y="45" text-anchor="middle" class="text-[16px] font-bold fill-white" id="percent_text">0%</text>
+                            </svg>
+                         </div>
+                         <div class="text-sm text-slate-400 font-medium">Probability of Contamination</div>
+                         <div class="mt-6 flex gap-3 text-xs font-mono text-slate-500 bg-black/20 p-2 rounded-lg border border-white/5">
+                            <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_5px_rgba(16,185,129,0.5)]"></div>Low</div>
+                            <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-yellow-500 shadow-[0_0_5px_rgba(234,179,8,0.5)]"></div>Mod</div>
+                            <div class="flex items-center gap-1.5"><div class="w-2 h-2 rounded-full bg-red-500 shadow-[0_0_5px_rgba(239,68,68,0.5)]"></div>High</div>
+                         </div>
+                    </div>
+
+                    <!-- Stats & MC -->
+                    <div class="space-y-6 flex flex-col justify-center">
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Confidence Interval (90% Credible)</p>
+                            <div class="relative h-4 bg-slate-800/50 rounded-full w-full border border-white/10 overflow-hidden">
+                                <!-- Range Bar -->
+                                <div id="ci_bar" class="absolute h-full bg-cyan-500/30 rounded-full transition-all duration-500 backdrop-blur-sm" style="left: 0%; width: 0%;"></div>
+                                <!-- Median Marker -->
+                                <div id="median_marker" class="absolute h-full w-1 bg-cyan-400 shadow-[0_0_10px_rgba(34,211,238,0.8)] transition-all duration-500" style="left: 0%;"></div>
+                            </div>
+                            <div class="flex justify-between text-xs text-slate-500 mt-2 font-mono">
+                                <span id="ci_low">0.00</span>
+                                <span id="ci_median" class="text-cyan-400 font-bold">0.00</span>
+                                <span id="ci_high">1.00</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-3">Top Drivers</p>
+                            <ul id="reasons_list" class="space-y-2 text-sm">
+                                <!-- Populated by JS -->
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Results Disclaimer -->
+                <div class="px-6 pb-4 relative z-10">
+                    <div class="bg-amber-900/20 border border-amber-500/20 rounded-lg p-3 flex items-start gap-3">
+                        <span class="text-amber-400 text-lg">⚠️</span>
+                        <p class="text-xs text-amber-200/80 leading-relaxed" data-i18n="resultsDisclaimer">
+                            <strong class="text-amber-300">Not an official WHO tool.</strong>
+                            This is for educational purposes only. Risk estimates are statistical models and should not replace professional water testing or medical advice.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mitigation Card -->
+            <div class="glass-panel p-6 rounded-2xl">
+                <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-hand-holding-droplet text-cyan-400"></i> Recommended Actions
+                </h3>
+                <div id="mitigation_list" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Populated by JS -->
+                </div>
+            </div>
+
+            <!-- Bacteria in Your Area -->
+            <div class="glass-panel p-6 rounded-2xl" id="bacteria_panel">
+                <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                    <span class="text-xl">🦠</span> Common Waterborne Pathogens
+                </h3>
+                <div id="bacteria_content" class="text-sm text-slate-400 text-center py-4">
+                    <i class="fas fa-map-marker-alt text-2xl mb-2 opacity-30"></i>
+                    <p>Select your region to see common waterborne bacteria in your area</p>
+                </div>
+            </div>
+
+            
+            <!-- Photo Documentation -->
+            <div id="photo_panel" class="glass-panel p-6 rounded-2xl hidden">
+                <h3 class="font-semibold text-white mb-4 flex items-center gap-2">
+                    <i class="fas fa-camera text-amber-400"></i> <span data-i18n="photoDoc">Photo Documentation</span>
+                </h3>
+                <div id="photo_preview" class="grid grid-cols-2 md:grid-cols-3 gap-3">
+                    <!-- Photos added here -->
+                </div>
+                <p class="text-xs text-slate-500 mt-3" data-i18n="photoHint">Photos are stored locally and included in exports</p>
+            </div>
+
+
+            <!-- Decay Curve (Full Width) -->
+            <div class="glass-panel p-5 rounded-2xl">
+                <h3 class="font-semibold text-white mb-4 text-sm">Rain/Flood Effect Decay</h3>
+                <div class="relative w-full h-64">
+                    <canvas id="decayChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Unit Tests Console -->
+            <div class="glass-panel p-6 rounded-2xl border border-slate-700/50">
+                <div class="flex justify-between items-center mb-4 border-b border-white/5 pb-2">
+                    <h3 class="font-bold text-slate-200 text-sm">Verification Suite (12 Tests)</h3>
+                    <span id="test_status" class="text-xs uppercase tracking-wider text-slate-500 font-mono">Ready</span>
+                </div>
+                <div id="test_console" class="space-y-1.5 h-48 overflow-y-auto font-mono text-xs">
+                    <span class="text-slate-500">> Waiting for execution... Click "Run Verification" above.</span>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- Disclaimer Footer -->
+    <footer class="mt-12 pt-8 border-t border-white/10">
+        <div class="glass-panel rounded-2xl p-6">
+            <div class="flex items-start gap-4">
+                <div class="text-3xl">⚠️</div>
+                <div class="flex-1">
+                    <h4 class="font-bold text-amber-300 mb-2" data-i18n="disclaimerTitle">Important Disclaimer</h4>
+                    <p class="text-sm text-slate-400 leading-relaxed mb-3" data-i18n="disclaimerText">
+                        This tool is for <strong class="text-white">educational and informational purposes only</strong>.
+                        It is <strong class="text-amber-300">NOT an official WHO application</strong> and has not been endorsed
+                        or validated by the World Health Organization. Risk assessments are based on statistical models and
+                        should not replace professional water quality testing or medical advice. Always consult local health
+                        authorities and water quality experts for definitive guidance.
+                    </p>
+                    <div class="flex flex-wrap gap-4 text-xs text-slate-500">
+                        <a href="https://www.who.int/teams/environment-climate-change-and-health/water-sanitation-and-health" target="_blank" class="hover:text-cyan-400 transition flex items-center gap-1">
+                            <i class="fas fa-external-link-alt"></i> WHO Water & Sanitation
+                        </a>
+                        <span>|</span>
+                        <span>v1.2.0</span>
+                        <span>|</span>
+                        <span>by Najia Ahmad</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <p class="text-center text-xs text-slate-600 mt-4">
+            Risk model methodology based on WHO Guidelines for Drinking-water Quality (4th ed.)
+        </p>
+    </footer>
+
+</div>
+
+<script>
+/**
+ * WATER SAFETY RISK ENGINE - JS GOLDEN REFERENCE
+ * Version 1.1.0 (All Improvements Applied)
+ * by Najia Ahmad
+ */
+
+// --- 1. COLOR CONSTANTS (Improvement B: Accessibility) ---
+const COLORS = {
+    low: { hex: '#10b981', rgb: 'rgba(16,185,129,0.5)', badge: 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30' },
+    moderate: { hex: '#eab308', rgb: 'rgba(234,179,8,0.5)', badge: 'bg-yellow-500/20 text-yellow-300 border border-yellow-500/30' },
+    high: { hex: '#ef4444', rgb: 'rgba(239,68,68,0.5)', badge: 'bg-red-500/20 text-red-300 border border-red-500/30' },
+    chart: { line: '#22d3ee', fill: 'rgba(34, 211, 238, 0.1)', point: '#0f172a' }
+};
+
+
+// --- MULTI-LANGUAGE SUPPORT ---
+const LANG = {
+    en: {
+        title: "Water Safety Risk Engine",
+        resample: "Resample",
+        runVerification: "Run Verification",
+        reset: "Reset",
+        export: "Export",
+        sourceVulnerability: "Source & Vulnerability",
+        sourceType: "Source Type",
+        pipedChlorinated: "Piped (Chlorinated)",
+        protectedBorehole: "Protected Borehole",
+        protectedWell: "Protected Well",
+        rainwaterCatchment: "Rainwater Catchment",
+        unprotectedBorehole: "Unprotected Borehole",
+        unprotectedWell: "Unprotected Well",
+        surfaceWater: "Surface Water (River/Dam)",
+        householdVulnerable: "Household Vulnerable?",
+        environment: "Environment",
+        heavyRain: "Heavy Rain (Last 5 days)",
+        flooding: "Flooding (Last 5 days)",
+        hoursSinceEvent: "Hours Since Event",
+        yourLocation: "Your Location",
+        detect: "Detect",
+        selectRegion: "Select Region...",
+        southAsia: "South Asia",
+        subSaharanAfrica: "Sub-Saharan Africa",
+        southeastAsia: "Southeast Asia",
+        latinAmerica: "Latin America",
+        middleEast: "Middle East / N. Africa",
+        eastAsia: "East Asia",
+        europe: "Europe",
+        northAmerica: "North America",
+        oceania: "Oceania",
+        detectingLocation: "Detecting location...",
+        locationDenied: "Location denied - please select manually",
+        couldNotDetect: "Could not detect region",
+        observations: "Observations",
+        turbidityVisible: "Turbidity Visible",
+        smellTasteChange: "Smell/Taste Change",
+        latrineDistance: "Latrine Distance",
+        safeDistance: "Safe Distance (>30m)",
+        lat10to30: "10m - 30m",
+        latUnder10: "Under 10m (High Risk)",
+        storageDuration: "Storage Duration",
+        freshCovered: "Fresh / Covered",
+        uncovered24h: "Uncovered > 24h",
+        uncovered48h: "Uncovered > 48h",
+        riskAssessmentResult: "Risk Assessment Result",
+        calculating: "Calculating...",
+        probContamination: "Probability of Contamination",
+        low: "Low",
+        moderate: "Mod",
+        high: "High",
+        confidenceInterval: "Confidence Interval (90% Credible)",
+        topDrivers: "Top Drivers",
+        noSignificantFactors: "No significant risk factors (baseline only)",
+        recommendedActions: "Recommended Actions",
+        urgentTreatment: "Urgent Treatment Required",
+        urgentTreatmentText: "Do not consume without treatment. Boil for at least 1 minute or use Chlorine/Aquatabs (double dose if cloudy).",
+        treatmentRecommended: "Treatment Recommended",
+        treatmentRecommendedText: "Treat water before drinking. Chlorination or Solar Disinfection (SODIS) is advised.",
+        maintainSafe: "Maintain Safe Practices",
+        maintainSafeText: "Water appears safe. Ensure transport and storage containers are clean to prevent re-contamination.",
+        clearWater: "Clear the Water",
+        clearWaterText: "Turbidity reduces chlorine effectiveness. Filter through a cloth or let settle before treating.",
+        sanitizeStorage: "Sanitize Storage",
+        sanitizeStorageText: "Scrub the storage container with soap and water. Keep it covered and elevated off the ground.",
+        sourceProtection: "Source Protection",
+        sourceProtectionText: "Inspect the well apron/head for cracks. Divert runoff away from the water source.",
+        commonPathogens: "Common Waterborne Pathogens",
+        selectRegionBacteria: "Select your region to see common waterborne bacteria in your area",
+        symptoms: "Symptoms:",
+        decayEffect: "Rain/Flood Effect Decay",
+        verificationSuite: "Verification Suite (12 Tests)",
+        ready: "Ready",
+        waitingExecution: "> Waiting for execution... Click \"Run Verification\" above.",
+        categoryLow: "low",
+        categoryModerate: "moderate",
+        categoryHigh: "high",
+        photoDoc: "Photo Documentation",
+        photoHint: "Photos are stored locally and included in exports",
+        disclaimerTitle: "Important Disclaimer",
+        resultsDisclaimer: "Not an official WHO tool. This is for educational purposes only. Risk estimates are statistical models and should not replace professional water testing or medical advice.",
+        disclaimerText: "This tool is for educational and informational purposes only. It is NOT an official WHO application and has not been endorsed or validated by the World Health Organization. Risk assessments are based on statistical models and should not replace professional water quality testing or medical advice."
+    },
+
+    fr: {
+        title: "Moteur de Risque de Securite de l'Eau",
+        resample: "Reechantillonner",
+        runVerification: "Verification",
+        reset: "Reinitialiser",
+        export: "Exporter",
+        sourceVulnerability: "Source & Vulnerabilite",
+        sourceType: "Type de Source",
+        pipedChlorinated: "Canalisee (Chloree)",
+        protectedBorehole: "Forage Protege",
+        protectedWell: "Puits Protege",
+        rainwaterCatchment: "Collecte d'Eau de Pluie",
+        unprotectedBorehole: "Forage Non Protege",
+        unprotectedWell: "Puits Non Protege",
+        surfaceWater: "Eau de Surface (Riviere/Barrage)",
+        householdVulnerable: "Menage Vulnerable?",
+        environment: "Environnement",
+        heavyRain: "Fortes Pluies (5 derniers jours)",
+        flooding: "Inondation (5 derniers jours)",
+        hoursSinceEvent: "Heures Depuis l'Evenement",
+        yourLocation: "Votre Emplacement",
+        detect: "Detecter",
+        selectRegion: "Selectionner Region...",
+        southAsia: "Asie du Sud",
+        subSaharanAfrica: "Afrique Subsaharienne",
+        southeastAsia: "Asie du Sud-Est",
+        latinAmerica: "Amerique Latine",
+        middleEast: "Moyen-Orient / Afrique N.",
+        eastAsia: "Asie de l'Est",
+        europe: "Europe",
+        northAmerica: "Amerique du Nord",
+        oceania: "Oceanie",
+        detectingLocation: "Detection de l'emplacement...",
+        locationDenied: "Localisation refusee - selectionnez manuellement",
+        couldNotDetect: "Impossible de detecter la region",
+        observations: "Observations",
+        turbidityVisible: "Turbidite Visible",
+        smellTasteChange: "Changement d'Odeur/Gout",
+        latrineDistance: "Distance des Latrines",
+        safeDistance: "Distance Sure (>30m)",
+        lat10to30: "10m - 30m",
+        latUnder10: "Moins de 10m (Risque Eleve)",
+        storageDuration: "Duree de Stockage",
+        freshCovered: "Frais / Couvert",
+        uncovered24h: "Non couvert > 24h",
+        uncovered48h: "Non couvert > 48h",
+        riskAssessmentResult: "Resultat d'Evaluation des Risques",
+        calculating: "Calcul en cours...",
+        probContamination: "Probabilite de Contamination",
+        low: "Faible",
+        moderate: "Mod",
+        high: "Eleve",
+        confidenceInterval: "Intervalle de Confiance (90%)",
+        topDrivers: "Principaux Facteurs",
+        noSignificantFactors: "Aucun facteur significatif",
+        recommendedActions: "Actions Recommandees",
+        urgentTreatment: "Traitement Urgent Requis",
+        urgentTreatmentText: "Ne pas consommer sans traitement. Faire bouillir au moins 1 minute.",
+        treatmentRecommended: "Traitement Recommande",
+        treatmentRecommendedText: "Traiter l'eau avant de boire.",
+        maintainSafe: "Maintenir des Pratiques Sures",
+        maintainSafeText: "L'eau semble sure. Assurez-vous que les conteneurs sont propres.",
+        clearWater: "Clarifier l'Eau",
+        clearWaterText: "La turbidite reduit l'efficacite du chlore.",
+        sanitizeStorage: "Assainir le Stockage",
+        sanitizeStorageText: "Nettoyer le conteneur avec du savon.",
+        sourceProtection: "Protection de la Source",
+        sourceProtectionText: "Inspecter le puits pour des fissures.",
+        commonPathogens: "Pathogenes Hydriques Courants",
+        selectRegionBacteria: "Selectionnez votre region",
+        symptoms: "Symptomes:",
+        decayEffect: "Effet Decroissant Pluie/Inondation",
+        verificationSuite: "Suite de Verification (12 Tests)",
+        ready: "Pret",
+        waitingExecution: "> En attente d'execution...",
+        categoryLow: "faible",
+        categoryModerate: "modere",
+        categoryHigh: "eleve",
+        photoDoc: "Documentation Photo",
+        photoHint: "Les photos sont stockees localement",
+        disclaimerTitle: "Avertissement Important",
+        resultsDisclaimer: "Pas un outil officiel de l'OMS. A des fins educatives uniquement. Les estimations de risque sont des modeles statistiques.",
+        disclaimerText: "Cet outil est uniquement a des fins educatives. Ce n'est PAS une application officielle de l'OMS."
+    },
+
+    es: {
+        title: "Motor de Riesgo de Seguridad del Agua",
+        resample: "Remuestrear",
+        runVerification: "Verificacion",
+        reset: "Reiniciar",
+        export: "Exportar",
+        sourceVulnerability: "Fuente y Vulnerabilidad",
+        sourceType: "Tipo de Fuente",
+        pipedChlorinated: "Entubada (Clorada)",
+        protectedBorehole: "Pozo Perforado Protegido",
+        protectedWell: "Pozo Protegido",
+        rainwaterCatchment: "Recoleccion de Agua Lluvia",
+        unprotectedBorehole: "Pozo Perforado No Protegido",
+        unprotectedWell: "Pozo No Protegido",
+        surfaceWater: "Agua Superficial (Rio/Presa)",
+        householdVulnerable: "Hogar Vulnerable?",
+        environment: "Ambiente",
+        heavyRain: "Lluvia Fuerte (ultimos 5 dias)",
+        flooding: "Inundacion (ultimos 5 dias)",
+        hoursSinceEvent: "Horas Desde el Evento",
+        yourLocation: "Tu Ubicacion",
+        detect: "Detectar",
+        selectRegion: "Seleccionar Region...",
+        southAsia: "Asia del Sur",
+        subSaharanAfrica: "Africa Subsahariana",
+        southeastAsia: "Sudeste Asiatico",
+        latinAmerica: "America Latina",
+        middleEast: "Medio Oriente",
+        eastAsia: "Asia Oriental",
+        europe: "Europa",
+        northAmerica: "America del Norte",
+        oceania: "Oceania",
+        detectingLocation: "Detectando ubicacion...",
+        locationDenied: "Ubicacion denegada",
+        couldNotDetect: "No se pudo detectar",
+        observations: "Observaciones",
+        turbidityVisible: "Turbidez Visible",
+        smellTasteChange: "Cambio de Olor/Sabor",
+        latrineDistance: "Distancia a Letrina",
+        safeDistance: "Distancia Segura (>30m)",
+        lat10to30: "10m - 30m",
+        latUnder10: "Menos de 10m (Alto Riesgo)",
+        storageDuration: "Duracion de Almacenamiento",
+        freshCovered: "Fresco / Cubierto",
+        uncovered24h: "Descubierto > 24h",
+        uncovered48h: "Descubierto > 48h",
+        riskAssessmentResult: "Resultado de Evaluacion",
+        calculating: "Calculando...",
+        probContamination: "Probabilidad de Contaminacion",
+        low: "Bajo",
+        moderate: "Mod",
+        high: "Alto",
+        confidenceInterval: "Intervalo de Confianza (90%)",
+        topDrivers: "Principales Factores",
+        noSignificantFactors: "Sin factores significativos",
+        recommendedActions: "Acciones Recomendadas",
+        urgentTreatment: "Tratamiento Urgente",
+        urgentTreatmentText: "No consumir sin tratamiento. Hervir al menos 1 minuto.",
+        treatmentRecommended: "Tratamiento Recomendado",
+        treatmentRecommendedText: "Tratar el agua antes de beber.",
+        maintainSafe: "Mantener Practicas Seguras",
+        maintainSafeText: "El agua parece segura.",
+        clearWater: "Clarificar el Agua",
+        clearWaterText: "La turbidez reduce la eficacia del cloro.",
+        sanitizeStorage: "Desinfectar Almacenamiento",
+        sanitizeStorageText: "Limpiar el contenedor con jabon.",
+        sourceProtection: "Proteccion de la Fuente",
+        sourceProtectionText: "Inspeccionar el pozo por grietas.",
+        commonPathogens: "Patogenos Hidricos Comunes",
+        selectRegionBacteria: "Seleccione su region",
+        symptoms: "Sintomas:",
+        decayEffect: "Efecto Decreciente Lluvia/Inundacion",
+        verificationSuite: "Suite de Verificacion (12 Pruebas)",
+        ready: "Listo",
+        waitingExecution: "> Esperando ejecucion...",
+        categoryLow: "bajo",
+        categoryModerate: "moderado",
+        categoryHigh: "alto",
+        photoDoc: "Documentacion Fotografica",
+        photoHint: "Fotos almacenadas localmente",
+        disclaimerTitle: "Aviso Importante",
+        resultsDisclaimer: "No es una herramienta oficial de la OMS. Solo para fines educativos. Las estimaciones de riesgo son modelos estadisticos.",
+        disclaimerText: "Esta herramienta es solo para fines educativos. NO es una aplicacion oficial de la OMS."
+    },
+
+    ar: {
+        title: "محرك مخاطر سلامة المياه",
+        resample: "اعادة العينة",
+        runVerification: "تشغيل التحقق",
+        reset: "اعادة تعيين",
+        export: "تصدير",
+        sourceVulnerability: "المصدر والضعف",
+        sourceType: "نوع المصدر",
+        pipedChlorinated: "انابيب (معالجة بالكلور)",
+        protectedBorehole: "بئر ارتوازي محمي",
+        protectedWell: "بئر محمي",
+        rainwaterCatchment: "تجميع مياه الامطار",
+        unprotectedBorehole: "بئر ارتوازي غير محمي",
+        unprotectedWell: "بئر غير محمي",
+        surfaceWater: "مياه سطحية (نهر/سد)",
+        householdVulnerable: "اسرة ضعيفة؟",
+        environment: "البيئة",
+        heavyRain: "امطار غزيرة (اخر 5 ايام)",
+        flooding: "فيضان (اخر 5 ايام)",
+        hoursSinceEvent: "ساعات منذ الحدث",
+        yourLocation: "موقعك",
+        detect: "كشف",
+        selectRegion: "اختر المنطقة...",
+        southAsia: "جنوب اسيا",
+        subSaharanAfrica: "افريقيا جنوب الصحراء",
+        southeastAsia: "جنوب شرق اسيا",
+        latinAmerica: "امريكا اللاتينية",
+        middleEast: "الشرق الاوسط",
+        eastAsia: "شرق اسيا",
+        europe: "اوروبا",
+        northAmerica: "امريكا الشمالية",
+        oceania: "اوقيانوسيا",
+        detectingLocation: "جاري الكشف...",
+        locationDenied: "تم رفض الموقع",
+        couldNotDetect: "تعذر الكشف",
+        observations: "الملاحظات",
+        turbidityVisible: "عكارة مرئية",
+        smellTasteChange: "تغير في الرائحة/الطعم",
+        latrineDistance: "المسافة من المرحاض",
+        safeDistance: "مسافة امنة (>30م)",
+        lat10to30: "10م - 30م",
+        latUnder10: "اقل من 10م (خطر عالي)",
+        storageDuration: "مدة التخزين",
+        freshCovered: "طازج / مغطى",
+        uncovered24h: "مكشوف > 24 ساعة",
+        uncovered48h: "مكشوف > 48 ساعة",
+        riskAssessmentResult: "نتيجة تقييم المخاطر",
+        calculating: "جاري الحساب...",
+        probContamination: "احتمال التلوث",
+        low: "منخفض",
+        moderate: "متوسط",
+        high: "عالي",
+        confidenceInterval: "فاصل الثقة (90٪)",
+        topDrivers: "العوامل الرئيسية",
+        noSignificantFactors: "لا توجد عوامل خطر كبيرة",
+        recommendedActions: "الاجراءات الموصى بها",
+        urgentTreatment: "العلاج العاجل مطلوب",
+        urgentTreatmentText: "لا تستهلك بدون معالجة.",
+        treatmentRecommended: "يوصى بالعلاج",
+        treatmentRecommendedText: "عالج الماء قبل الشرب.",
+        maintainSafe: "الحفاظ على الممارسات الامنة",
+        maintainSafeText: "يبدو الماء امنا.",
+        clearWater: "صفي الماء",
+        clearWaterText: "تقلل العكارة من فعالية الكلور.",
+        sanitizeStorage: "تعقيم التخزين",
+        sanitizeStorageText: "اغسل الحاوية بالصابون.",
+        sourceProtection: "حماية المصدر",
+        sourceProtectionText: "افحص البئر للتشققات.",
+        commonPathogens: "مسببات الامراض الشائعة",
+        selectRegionBacteria: "اختر منطقتك",
+        symptoms: "الاعراض:",
+        decayEffect: "تاثير تناقص المطر/الفيضان",
+        verificationSuite: "مجموعة التحقق",
+        ready: "جاهز",
+        waitingExecution: "> في انتظار التنفيذ...",
+        categoryLow: "منخفض",
+        categoryModerate: "متوسط",
+        categoryHigh: "عالي",
+        photoDoc: "توثيق بالصور",
+        photoHint: "يتم تخزين الصور محليا",
+        disclaimerTitle: "تنويه مهم",
+        resultsDisclaimer: "ليست اداة رسمية لمنظمة الصحة العالمية. لاغراض تعليمية فقط.",
+        disclaimerText: "هذه الاداة لاغراض تعليمية فقط. هذا ليس تطبيقا رسميا لمنظمة الصحة العالمية."
+    },
+
+    pt: {
+        title: "Motor de Risco de Seguranca da Agua",
+        resample: "Reamostrar",
+        runVerification: "Verificacao",
+        reset: "Reiniciar",
+        export: "Exportar",
+        sourceVulnerability: "Fonte e Vulnerabilidade",
+        sourceType: "Tipo de Fonte",
+        pipedChlorinated: "Canalizada (Clorada)",
+        protectedBorehole: "Furo Protegido",
+        protectedWell: "Poco Protegido",
+        rainwaterCatchment: "Captacao de Agua da Chuva",
+        unprotectedBorehole: "Furo Nao Protegido",
+        unprotectedWell: "Poco Nao Protegido",
+        surfaceWater: "Agua Superficial (Rio/Barragem)",
+        householdVulnerable: "Agregado Vulneravel?",
+        environment: "Ambiente",
+        heavyRain: "Chuva Forte (ultimos 5 dias)",
+        flooding: "Inundacao (ultimos 5 dias)",
+        hoursSinceEvent: "Horas Desde o Evento",
+        yourLocation: "Sua Localizacao",
+        detect: "Detetar",
+        selectRegion: "Selecionar Regiao...",
+        southAsia: "Sul da Asia",
+        subSaharanAfrica: "Africa Subsaariana",
+        southeastAsia: "Sudeste Asiatico",
+        latinAmerica: "America Latina",
+        middleEast: "Medio Oriente",
+        eastAsia: "Asia Oriental",
+        europe: "Europa",
+        northAmerica: "America do Norte",
+        oceania: "Oceania",
+        detectingLocation: "Detetando localizacao...",
+        locationDenied: "Localizacao negada",
+        couldNotDetect: "Nao foi possivel detetar",
+        observations: "Observacoes",
+        turbidityVisible: "Turbidez Visivel",
+        smellTasteChange: "Mudanca de Cheiro/Sabor",
+        latrineDistance: "Distancia da Latrina",
+        safeDistance: "Distancia Segura (>30m)",
+        lat10to30: "10m - 30m",
+        latUnder10: "Menos de 10m (Alto Risco)",
+        storageDuration: "Duracao de Armazenamento",
+        freshCovered: "Fresco / Coberto",
+        uncovered24h: "Descoberto > 24h",
+        uncovered48h: "Descoberto > 48h",
+        riskAssessmentResult: "Resultado da Avaliacao",
+        calculating: "Calculando...",
+        probContamination: "Probabilidade de Contaminacao",
+        low: "Baixo",
+        moderate: "Mod",
+        high: "Alto",
+        confidenceInterval: "Intervalo de Confianca (90%)",
+        topDrivers: "Principais Fatores",
+        noSignificantFactors: "Sem fatores significativos",
+        recommendedActions: "Acoes Recomendadas",
+        urgentTreatment: "Tratamento Urgente",
+        urgentTreatmentText: "Nao consumir sem tratamento.",
+        treatmentRecommended: "Tratamento Recomendado",
+        treatmentRecommendedText: "Tratar a agua antes de beber.",
+        maintainSafe: "Manter Praticas Seguras",
+        maintainSafeText: "A agua parece segura.",
+        clearWater: "Clarificar a Agua",
+        clearWaterText: "A turbidez reduz a eficacia do cloro.",
+        sanitizeStorage: "Higienizar Armazenamento",
+        sanitizeStorageText: "Limpar o recipiente com sabao.",
+        sourceProtection: "Protecao da Fonte",
+        sourceProtectionText: "Inspecionar o poco para rachaduras.",
+        commonPathogens: "Patogenos Hidricos Comuns",
+        selectRegionBacteria: "Selecione sua regiao",
+        symptoms: "Sintomas:",
+        decayEffect: "Efeito Decrescente",
+        verificationSuite: "Suite de Verificacao",
+        ready: "Pronto",
+        waitingExecution: "> Aguardando execucao...",
+        categoryLow: "baixo",
+        categoryModerate: "moderado",
+        categoryHigh: "alto",
+        photoDoc: "Documentacao Fotografica",
+        photoHint: "Fotos armazenadas localmente",
+        disclaimerTitle: "Aviso Importante",
+        resultsDisclaimer: "Nao e uma ferramenta oficial da OMS. Apenas para fins educacionais. Estimativas de risco sao modelos estatisticos.",
+        disclaimerText: "Esta ferramenta e apenas para fins educacionais. NAO e uma aplicacao oficial da OMS."
+    }
+};
+
+const LANG_FLAGS = { en: '🇬🇧', fr: '🇫🇷', es: '🇪🇸', ar: '🇸🇦', pt: '🇧🇷' };
+let currentLang = 'en';
+let capturedPhotos = [];
+
+function showLanguagePicker() {
+    document.getElementById('lang_modal').style.display = 'flex';
+}
+
+function setLanguage(lang) {
+    currentLang = lang;
+    localStorage.setItem('waterSafetyLang', lang);
+    document.getElementById('lang_modal').style.display = 'none';
+    document.getElementById('current_lang_flag').textContent = LANG_FLAGS[lang];
+    document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+    document.documentElement.lang = lang;
+    applyTranslations();
+}
+
+function t(key) {
+    return LANG[currentLang]?.[key] || LANG.en[key] || key;
+}
+
+function applyTranslations() {
+    const L = LANG[currentLang];
+
+    // Header title
+    const h1 = document.querySelector('h1');
+    if (h1) {
+        const versionSpan = h1.querySelector('.text-cyan-300');
+        const authorSpan = h1.querySelector('span[style]');
+        h1.childNodes[0].textContent = L.title + ' ';
+    }
+
+    // Buttons with data-i18n
+    document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (L[key]) {
+            if (el.tagName === 'SPAN' || el.tagName === 'BUTTON') {
+                el.textContent = L[key];
+            } else if (el.tagName === 'P' || el.tagName === 'H4') {
+                el.innerHTML = L[key];
+            }
+        }
+    });
+
+    // Update source select options
+    const sourceSelect = document.getElementById('source_type');
+    if (sourceSelect && sourceSelect.options.length >= 7) {
+        sourceSelect.options[0].text = L.pipedChlorinated;
+        sourceSelect.options[1].text = L.protectedBorehole;
+        sourceSelect.options[2].text = L.protectedWell;
+        sourceSelect.options[3].text = L.rainwaterCatchment;
+        sourceSelect.options[4].text = L.unprotectedBorehole;
+        sourceSelect.options[5].text = L.unprotectedWell;
+        sourceSelect.options[6].text = L.surfaceWater;
+    }
+
+    // Region select
+    const regionSelect = document.getElementById('region_select');
+    if (regionSelect && regionSelect.options.length >= 10) {
+        regionSelect.options[0].text = L.selectRegion;
+        regionSelect.options[1].text = L.southAsia;
+        regionSelect.options[2].text = L.subSaharanAfrica;
+        regionSelect.options[3].text = L.southeastAsia;
+        regionSelect.options[4].text = L.latinAmerica;
+        regionSelect.options[5].text = L.middleEast;
+        regionSelect.options[6].text = L.eastAsia;
+        regionSelect.options[7].text = L.europe;
+        regionSelect.options[8].text = L.northAmerica;
+        regionSelect.options[9].text = L.oceania;
+    }
+
+    updateBacteria();
+    updateUI();
+}
+
+// --- PHOTO DOCUMENTATION ---
+function handlePhoto(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        const photoData = {
+            data: e.target.result,
+            timestamp: new Date().toISOString(),
+            id: Date.now()
+        };
+        capturedPhotos.push(photoData);
+        renderPhotos();
+        document.getElementById('photo_panel').classList.remove('hidden');
+    };
+    reader.readAsDataURL(file);
+    event.target.value = '';
+}
+
+function renderPhotos() {
+    const container = document.getElementById('photo_preview');
+    container.innerHTML = capturedPhotos.map((p, i) => `
+        <div class="relative group">
+            <img src="${p.data}" class="w-full h-24 object-cover rounded-lg border border-white/10">
+            <button onclick="removePhoto(${i})" class="absolute top-1 right-1 w-6 h-6 bg-red-500/80 rounded-full text-white text-xs opacity-0 group-hover:opacity-100 transition">
+                <i class="fas fa-times"></i>
+            </button>
+            <div class="absolute bottom-1 left-1 text-[8px] text-white/70 bg-black/50 px-1 rounded">
+                ${new Date(p.timestamp).toLocaleTimeString()}
+            </div>
+        </div>
+    `).join('');
+}
+
+function removePhoto(index) {
+    capturedPhotos.splice(index, 1);
+    renderPhotos();
+    if (capturedPhotos.length === 0) {
+        document.getElementById('photo_panel').classList.add('hidden');
+    }
+}
+
+// --- DATA EXPORT ---
+function exportData() {
+    const inputs = getInputs();
+    const result = computeRisk(inputs, MODEL, currentSeed);
+    const region = document.getElementById('region_select').value;
+
+    const exportObj = {
+        meta: {
+            appName: "Water Safety Risk Engine",
+            version: "1.2.0",
+            exportDate: new Date().toISOString(),
+            language: currentLang,
+            disclaimer: "NOT AN OFFICIAL WHO APPLICATION - For educational purposes only"
+        },
+        assessment: {
+            inputs: inputs,
+            result: {
+                probability: result.P,
+                category: result.category,
+                confidence_interval: { low: result.min, high: result.max },
+                confidence: result.confidence,
+                top_drivers: result.contributions.slice(0, 5)
+            },
+            region: region,
+            timestamp: new Date().toISOString()
+        },
+        photos: capturedPhotos.map(p => ({
+            timestamp: p.timestamp,
+            data: p.data.substring(0, 100) + '...[truncated]'
+        }))
+    };
+
+    // Create download
+    const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `water-safety-assessment-${new Date().toISOString().split('T')[0]}.json`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+
+    // Also create CSV for surveillance integration
+    const csv = [
+        'timestamp,source_type,region,risk_probability,risk_category,ci_low,ci_high,vulnerable,heavy_rain,flooding,hours_since,turbidity,smell_change,latrine_under_10m,latrine_10_30m,storage_24h,storage_48h',
+        [
+            exportObj.assessment.timestamp,
+            inputs.source_type,
+            region,
+            result.P.toFixed(4),
+            result.category,
+            result.min.toFixed(4),
+            result.max.toFixed(4),
+            inputs.is_vulnerable,
+            inputs.heavy_rain,
+            inputs.flooding,
+            inputs.hours_since_rain_or_flood || '',
+            inputs.turbidity_visible,
+            inputs.smell_or_taste_change,
+            inputs.latrine_under_10m,
+            inputs.latrine_10_to_30m,
+            inputs.storage_uncovered_over_24h,
+            inputs.storage_uncovered_over_48h
+        ].join(',')
+    ].join('\n');
+
+    const csvBlob = new Blob([csv], { type: 'text/csv' });
+    const csvUrl = URL.createObjectURL(csvBlob);
+    const csvLink = document.createElement('a');
+    csvLink.href = csvUrl;
+    csvLink.download = `water-safety-${new Date().toISOString().split('T')[0]}.csv`;
+    document.body.appendChild(csvLink);
+    csvLink.click();
+    document.body.removeChild(csvLink);
+    URL.revokeObjectURL(csvUrl);
+}
+
+
+// --- BACTERIA DATABASE BY REGION ---
+const BACTERIA_DB = {
+    // Global pathogens (found everywhere)
+    global: [
+        { name: "E. coli", emoji: "🦠", disease: "Diarrhoea, UTIs", severity: "moderate", symptoms: "💧 Watery diarrhoea, 🤢 Nausea, 🤕 Cramps" },
+        { name: "Salmonella", emoji: "🧫", disease: "Typhoid, Gastroenteritis", severity: "high", symptoms: "🤒 Fever, 💩 Diarrhoea, 🤮 Vomiting" },
+        { name: "Vibrio cholerae", emoji: "💀", disease: "Cholera", severity: "critical", symptoms: "💧 Severe watery diarrhoea, 🥵 Dehydration, ⚡ Rapid onset" }
+    ],
+
+    south_asia: [
+        { name: "Shigella", emoji: "🔴", disease: "Shigellosis (Bloody diarrhoea)", severity: "high", symptoms: "🩸 Bloody stool, 🤒 Fever, 🤕 Severe cramps" },
+        { name: "Hepatitis A virus", emoji: "🟡", disease: "Hepatitis A", severity: "high", symptoms: "🟡 Jaundice, 😴 Fatigue, 🤢 Nausea" },
+        { name: "Rotavirus", emoji: "🔵", disease: "Severe diarrhoea (children)", severity: "high", symptoms: "🤮 Vomiting, 💧 Watery diarrhoea, 🤒 Fever" },
+        { name: "Entamoeba histolytica", emoji: "🟤", disease: "Amoebic dysentery", severity: "high", symptoms: "🩸 Bloody diarrhoea, 😣 Abdominal pain, 🤒 Fever" }
+    ],
+
+    sub_saharan_africa: [
+        { name: "Vibrio cholerae O1", emoji: "💀", disease: "Epidemic Cholera", severity: "critical", symptoms: "💧 Rice-water stool, ⚡ Rapid dehydration, 🆘 Life-threatening" },
+        { name: "Cryptosporidium", emoji: "🟢", disease: "Cryptosporidiosis", severity: "moderate", symptoms: "💧 Watery diarrhoea, 🤕 Cramps, 😴 Fatigue" },
+        { name: "Schistosoma", emoji: "🐛", disease: "Schistosomiasis (Bilharzia)", severity: "high", symptoms: "🩸 Blood in urine, 🤕 Abdominal pain, 😴 Chronic fatigue" },
+        { name: "Guinea worm", emoji: "🪱", disease: "Dracunculiasis", severity: "moderate", symptoms: "🔥 Burning blister, 🦵 Leg ulcers, 🤒 Fever" }
+    ],
+
+    southeast_asia: [
+        { name: "Leptospira", emoji: "🌀", disease: "Leptospirosis", severity: "high", symptoms: "🤒 High fever, 🤕 Headache, 💪 Muscle pain, 🟡 Jaundice" },
+        { name: "Hepatitis E virus", emoji: "🟠", disease: "Hepatitis E", severity: "high", symptoms: "🟡 Jaundice, 🤢 Nausea, 🤰 Dangerous in pregnancy" },
+        { name: "Campylobacter", emoji: "🔷", disease: "Campylobacteriosis", severity: "moderate", symptoms: "💧 Diarrhoea, 🤒 Fever, 🤕 Abdominal cramps" },
+        { name: "Giardia lamblia", emoji: "🟣", disease: "Giardiasis", severity: "moderate", symptoms: "💨 Bloating, 💧 Greasy diarrhoea, 🤢 Nausea" }
+    ],
+
+    latin_america: [
+        { name: "Cyclospora", emoji: "🔘", disease: "Cyclosporiasis", severity: "moderate", symptoms: "💧 Watery diarrhoea, 😴 Fatigue, 📉 Weight loss" },
+        { name: "Enteroaggregative E. coli", emoji: "🦠", disease: "Traveler's diarrhoea", severity: "moderate", symptoms: "💧 Persistent diarrhoea, 🤢 Nausea, 🤕 Cramps" },
+        { name: "Norovirus", emoji: "🟪", disease: "Viral gastroenteritis", severity: "moderate", symptoms: "🤮 Projectile vomiting, 💧 Diarrhoea, ⚡ Rapid spread" },
+        { name: "Ascaris", emoji: "🪱", disease: "Ascariasis (Roundworm)", severity: "moderate", symptoms: "🤕 Abdominal pain, 🫁 Cough, 📉 Malnutrition" }
+    ],
+
+    middle_east: [
+        { name: "Enterococcus", emoji: "🟤", disease: "Gastroenteritis, UTIs", severity: "moderate", symptoms: "💧 Diarrhoea, 🔥 Painful urination, 🤒 Fever" },
+        { name: "Pseudomonas aeruginosa", emoji: "🟢", disease: "Skin/ear infections", severity: "moderate", symptoms: "👂 Ear pain, 🩹 Skin rash, 🤒 Fever" },
+        { name: "Legionella", emoji: "🫁", disease: "Legionnaires' disease", severity: "high", symptoms: "🫁 Pneumonia, 🤒 High fever, 🤕 Headache" }
+    ],
+
+    east_asia: [
+        { name: "Clonorchis sinensis", emoji: "🐛", disease: "Liver fluke infection", severity: "moderate", symptoms: "🤕 Abdominal pain, 🟡 Jaundice, 😴 Fatigue" },
+        { name: "Aeromonas", emoji: "🔵", disease: "Gastroenteritis, wound infections", severity: "moderate", symptoms: "💧 Diarrhoea, 🩹 Wound infection, 🤒 Fever" },
+        { name: "Vibrio parahaemolyticus", emoji: "🦐", disease: "Seafood poisoning", severity: "moderate", symptoms: "💧 Watery diarrhoea, 🤕 Cramps, 🤮 Vomiting" }
+    ],
+
+    europe: [
+        { name: "Campylobacter jejuni", emoji: "🔷", disease: "Campylobacteriosis", severity: "moderate", symptoms: "💧 Diarrhoea, 🤒 Fever, 🤕 Cramps" },
+        { name: "Giardia", emoji: "🟣", disease: "Giardiasis", severity: "low", symptoms: "💨 Bloating, 💧 Diarrhoea, 🤢 Nausea" },
+        { name: "Cryptosporidium parvum", emoji: "🟢", disease: "Cryptosporidiosis", severity: "low", symptoms: "💧 Watery diarrhoea, 🤕 Cramps, 😴 Fatigue" }
+    ],
+
+    north_america: [
+        { name: "Giardia lamblia", emoji: "🟣", disease: "Giardiasis (Beaver fever)", severity: "low", symptoms: "💨 Gas/bloating, 💧 Diarrhoea, 🤕 Cramps" },
+        { name: "Legionella pneumophila", emoji: "🫁", disease: "Legionnaires' disease", severity: "high", symptoms: "🫁 Pneumonia, 🤒 Fever, 💪 Muscle aches" },
+        { name: "Naegleria fowleri", emoji: "🧠", disease: "Brain-eating amoeba", severity: "critical", symptoms: "🧠 Severe headache, 🤒 Fever, 🆘 Rapidly fatal" }
+    ],
+
+    oceania: [
+        { name: "Burkholderia pseudomallei", emoji: "🔴", disease: "Melioidosis", severity: "high", symptoms: "🤒 Fever, 🫁 Pneumonia, 🩹 Skin abscesses" },
+        { name: "Leptospira", emoji: "🌀", disease: "Leptospirosis", severity: "high", symptoms: "🤒 Fever, 🤕 Headache, 🟡 Jaundice" },
+        { name: "Vibrio vulnificus", emoji: "🦪", disease: "Wound infections, sepsis", severity: "critical", symptoms: "🩹 Severe wound infection, 🆘 Sepsis, 🤒 Fever" }
+    ]
+};
+
+// Map countries to regions
+const COUNTRY_TO_REGION = {
+    'IN': 'south_asia', 'PK': 'south_asia', 'BD': 'south_asia', 'NP': 'south_asia', 'LK': 'south_asia', 'AF': 'south_asia',
+    'NG': 'sub_saharan_africa', 'ET': 'sub_saharan_africa', 'KE': 'sub_saharan_africa', 'TZ': 'sub_saharan_africa',
+    'ZA': 'sub_saharan_africa', 'GH': 'sub_saharan_africa', 'UG': 'sub_saharan_africa', 'SN': 'sub_saharan_africa',
+    'CD': 'sub_saharan_africa', 'ZW': 'sub_saharan_africa', 'MW': 'sub_saharan_africa', 'ZM': 'sub_saharan_africa',
+    'VN': 'southeast_asia', 'TH': 'southeast_asia', 'PH': 'southeast_asia', 'ID': 'southeast_asia',
+    'MY': 'southeast_asia', 'MM': 'southeast_asia', 'KH': 'southeast_asia', 'LA': 'southeast_asia',
+    'BR': 'latin_america', 'MX': 'latin_america', 'CO': 'latin_america', 'AR': 'latin_america',
+    'PE': 'latin_america', 'VE': 'latin_america', 'CL': 'latin_america', 'EC': 'latin_america',
+    'EG': 'middle_east', 'SA': 'middle_east', 'IR': 'middle_east', 'IQ': 'middle_east',
+    'MA': 'middle_east', 'DZ': 'middle_east', 'TN': 'middle_east', 'JO': 'middle_east',
+    'CN': 'east_asia', 'JP': 'east_asia', 'KR': 'east_asia', 'TW': 'east_asia', 'HK': 'east_asia',
+    'GB': 'europe', 'DE': 'europe', 'FR': 'europe', 'IT': 'europe', 'ES': 'europe',
+    'PL': 'europe', 'NL': 'europe', 'BE': 'europe', 'SE': 'europe', 'NO': 'europe',
+    'US': 'north_america', 'CA': 'north_america',
+    'AU': 'oceania', 'NZ': 'oceania', 'FJ': 'oceania', 'PG': 'oceania'
+};
+
+
+// --- 2. CONFIGURATION & MODEL v1.0.4 ---
+const MODEL = {
+    version: "1.0.4",
+    model_name: "WaterSafetyFieldRiskScore",
+    decay: {
+        tau_hours: 36,
+        max_effect_hours: 120
+    },
+    thresholds: {
+        standard: { low: 0.20, high: 0.50 },
+        vulnerable: { low: 0.10, high: 0.35 }
+    },
+    uncertainty: {
+        n_samples: 200,
+        missing_input_uncertainty_penalty_sd: 0.20,
+        confidence_clip: { min: 0.05, max: 0.95 }
+    },
+    source_priors: {
+        "piped_chlorinated":     { p_unsafe: 0.05, sd_logodds: 0.35 },
+        "protected_borehole":    { p_unsafe: 0.10, sd_logodds: 0.40 },
+        "unprotected_borehole":  { p_unsafe: 0.20, sd_logodds: 0.45 },
+        "protected_well":        { p_unsafe: 0.25, sd_logodds: 0.50 },
+        "unprotected_well":      { p_unsafe: 0.40, sd_logodds: 0.55 },
+        "surface_water":         { p_unsafe: 0.60, sd_logodds: 0.60 },
+        "rainwater":             { p_unsafe: 0.30, sd_logodds: 0.50 }
+    },
+    weights: {
+        "heavy_rain": { mean: 2.0, sd: 0.40 },
+        "flooding": { mean: 2.5, sd: 0.45 },
+        "turbidity_visible": { mean: 1.5, sd: 0.30 },
+        "smell_or_taste_change": { mean: 1.2, sd: 0.30 },
+        "storage_uncovered_over_24h": { mean: 0.8, sd: 0.25 },
+        "storage_uncovered_over_48h": { mean: 1.2, sd: 0.30 },
+        "animals_access_or_open_container": { mean: 0.8, sd: 0.25 },
+        "latrine_under_10m": { mean: 1.0, sd: 0.30 },
+        "latrine_10_to_30m": { mean: 0.5, sd: 0.25 },
+        "dirty_fetch_container": { mean: 1.0, sd: 0.30 },
+        "diarrhoea_signal_mild": { mean: 0.8, sd: 0.35 },
+        "diarrhoea_signal_strong": { mean: 1.5, sd: 0.40 }
+    },
+    interactions: {
+        "rain_or_flood_x_unprotected_source": { enabled: true, mean: 0.8, sd: 0.25 }
+    },
+    factor_groups: [
+        { name: "storage_duration", mode: "max_only", members: ["storage_uncovered_over_24h", "storage_uncovered_over_48h"] },
+        { name: "latrine_distance", mode: "max_only", members: ["latrine_under_10m", "latrine_10_to_30m"] },
+        { name: "diarrhoea_signal", mode: "max_only", members: ["diarrhoea_signal_mild", "diarrhoea_signal_strong"] }
+    ]
+};
+
+// --- 3. PRNG (Bit-Exact Logic for Golden Tests / WASM Matching) ---
+class XorShift128Plus {
+    constructor(seed) {
+        this.s0 = this.splitmix64(BigInt(seed));
+        this.s1 = this.splitmix64(BigInt(seed) ^ 0xDEADBEEFCAFEBABEn);
+    }
+    splitmix64(x) {
+        x = BigInt.asUintN(64, x + 0x9E3779B97F4A7C15n);
+        let z = x;
+        z = BigInt.asUintN(64, (z ^ (z >> 30n)) * 0xBF58476D1CE4E5B9n);
+        z = BigInt.asUintN(64, (z ^ (z >> 27n)) * 0x94D049BB133111EBn);
+        return BigInt.asUintN(64, z ^ (z >> 31n));
+    }
+    next() {
+        let x = this.s0;
+        let y = this.s1;
+        this.s0 = y;
+        x = BigInt.asUintN(64, x ^ (x << 23n));
+        this.s1 = BigInt.asUintN(64, x ^ y ^ (x >> 17n) ^ (y >> 26n));
+        return BigInt.asUintN(64, this.s1 + y);
+    }
+    nextDouble() {
+        const u = Number(this.next() >> 11n);
+        return u * (1.0 / 9007199254740992.0);
+    }
+    nextNormal(mean = 0, sd = 1) {
+        let u = 0, v = 0;
+        while(u === 0) u = this.nextDouble(); 
+        v = this.nextDouble();
+        const z = Math.sqrt(-2.0 * Math.log(u)) * Math.cos(2.0 * Math.PI * v);
+        return mean + (z * sd);
+    }
+}
+
+// --- 4. SCORING ENGINE ---
+const sigmoid = (x) => 1 / (1 + Math.exp(-x));
+const logit = (p) => Math.log(p / (1 - p));
+
+function decay(hoursSince, tau, maxHours) {
+    if (hoursSince === null || hoursSince === undefined) return 0;
+    if (hoursSince > maxHours) return 0;
+    return Math.exp(-hoursSince / tau);
+}
+
+function countMissing(inputs) {
+    const requiredAlways = [
+        "heavy_rain", "flooding", "turbidity_visible", "smell_or_taste_change",
+        "storage_uncovered_over_24h", "storage_uncovered_over_48h",
+        "animals_access_or_open_container", "latrine_under_10m", "latrine_10_to_30m",
+        "dirty_fetch_container", "diarrhoea_signal_mild", "diarrhoea_signal_strong"
+    ];
+    let missing = 0;
+    for (const k of requiredAlways) {
+        if (!(k in inputs) || inputs[k] === null || inputs[k] === undefined) missing++;
+    }
+    if (inputs.heavy_rain || inputs.flooding) {
+         if (inputs.hours_since_rain_or_flood === null || inputs.hours_since_rain_or_flood === undefined) {
+             missing++;
+         }
+    }
+    return missing;
+}
+
+function applyGroupedWeights(inputs, model, contributionsOut, isMonteCarlo, rng) {
+    let total = 0;
+    const used = new Set();
+    for (const group of model.factor_groups || []) {
+        if (group.mode !== "max_only") continue;
+        for (const m of group.members) used.add(m);
+        let best = null;
+        for (const member of group.members) {
+            if (inputs[member] === true) {
+                const wObj = model.weights[member];
+                if (!wObj) continue;
+                if (!best || wObj.mean > best.meanVal) best = { key: member, wObj: wObj, meanVal: wObj.mean };
+            }
+        }
+        if (best) {
+            let val = best.wObj.mean;
+            if (isMonteCarlo && rng) val = rng.nextNormal(best.wObj.mean, best.wObj.sd);
+            total += val;
+            if(contributionsOut) contributionsOut.push({ key: best.key, value: val });
+        }
+    }
+    for (const k in model.weights) {
+        if (k === "heavy_rain" || k === "flooding") continue; 
+        if (used.has(k)) continue; 
+        if (inputs[k] === true) {
+            let val = model.weights[k].mean;
+            if (isMonteCarlo && rng) val = rng.nextNormal(model.weights[k].mean, model.weights[k].sd);
+            total += val;
+            if(contributionsOut) contributionsOut.push({ key: k, value: val });
+        }
+    }
+    return total;
+}
+
+function computeRisk(inputs, model, seed = 12345) {
+    const sourceData = model.source_priors[inputs.source_type];
+    if (!sourceData) return { error: "Invalid source type" };
+    let L_det = logit(sourceData.p_unsafe);
+    const contributions = [];
+    const hours = inputs.hours_since_rain_or_flood;
+    const d = decay(hours, model.decay.tau_hours, model.decay.max_effect_hours);
+    if (inputs.heavy_rain) {
+        const val = model.weights.heavy_rain.mean * d;
+        L_det += val;
+        contributions.push({ key: "heavy_rain", value: val });
+    }
+    if (inputs.flooding) {
+        const val = model.weights.flooding.mean * d;
+        L_det += val;
+        contributions.push({ key: "flooding", value: val });
+    }
+    L_det += applyGroupedWeights(inputs, model, contributions, false, null);
+    const isUnprotected = ["unprotected_borehole", "unprotected_well"].includes(inputs.source_type);
+    const hadRainOrFlood = (inputs.heavy_rain || inputs.flooding) && d > 0.01;
+    if (model.interactions.rain_or_flood_x_unprotected_source.enabled && isUnprotected && hadRainOrFlood) {
+        const val = model.interactions.rain_or_flood_x_unprotected_source.mean;
+        L_det += val;
+        contributions.push({ key: "interaction", value: val });
+    }
+    // Note: P_det removed from return (Improvement A - Clean removal)
+    const rng = new XorShift128Plus(seed);
+    const samples = [];
+    const missingCount = countMissing(inputs);
+    const missingPenalty = model.uncertainty.missing_input_uncertainty_penalty_sd * Math.min(missingCount, 3);
+    for (let i = 0; i < model.uncertainty.n_samples; i++) {
+        let L_iter = rng.nextNormal(logit(sourceData.p_unsafe), sourceData.sd_logodds);
+        L_iter += rng.nextNormal(0, missingPenalty);
+        if (inputs.heavy_rain) L_iter += rng.nextNormal(model.weights.heavy_rain.mean, model.weights.heavy_rain.sd) * d;
+        if (inputs.flooding) L_iter += rng.nextNormal(model.weights.flooding.mean, model.weights.flooding.sd) * d;
+        L_iter += applyGroupedWeights(inputs, model, null, true, rng);
+        if (model.interactions.rain_or_flood_x_unprotected_source.enabled && isUnprotected && hadRainOrFlood) {
+            L_iter += rng.nextNormal(model.interactions.rain_or_flood_x_unprotected_source.mean, model.interactions.rain_or_flood_x_unprotected_source.sd);
+        }
+        samples.push(sigmoid(L_iter));
+    }
+    samples.sort((a, b) => a - b);
+    const p10 = samples[Math.floor((samples.length - 1) * 0.10)];
+    const p50 = samples[Math.floor((samples.length - 1) * 0.50)];
+    const p90 = samples[Math.floor((samples.length - 1) * 0.90)];
+    const thr = inputs.is_vulnerable ? model.thresholds.vulnerable : model.thresholds.standard;
+    let category = "low";
+    if (p50 >= thr.high) category = "high";
+    else if (p50 >= thr.low) category = "moderate";
+    let conf = 1.0 - (p90 - p10);
+    conf = Math.max(model.uncertainty.confidence_clip.min, Math.min(model.uncertainty.confidence_clip.max, conf));
+    return {
+        P: p50, min: p10, max: p90, category, confidence: conf, missingCount: missingCount,
+        contributions: contributions.sort((a, b) => b.value - a.value)
+    };
+}
+
+// --- 5. ADVICE ENGINE (WHO ONLY) ---
+function getMitigationAdvice(result, inputs) {
+    const advice = [];
+    if (result.category === 'high') {
+        advice.push({
+            title: "Urgent Treatment Required",
+            text: "Do not consume without treatment. Boil for at least 1 minute or use Chlorine/Aquatabs (double dose if cloudy).",
+            color: "text-red-200 bg-red-900/30 border-red-500/30",
+            link: { url: "https://www.who.int/teams/environment-climate-change-and-health/water-sanitation-and-health/water-safety-and-quality/household-water-treatment-and-safe-storage", label: "WHO: Household Water Treatment" }
+        });
+    } else if (result.category === 'moderate') {
+        advice.push({
+            title: "Treatment Recommended",
+            text: "Treat water before drinking. Chlorination or Solar Disinfection (SODIS) is advised.",
+            color: "text-yellow-200 bg-yellow-900/30 border-yellow-500/30",
+            link: { url: "https://www.who.int/teams/environment-climate-change-and-health/water-sanitation-and-health/water-safety-and-quality/household-water-treatment-and-safe-storage", label: "WHO: Household Water Treatment" }
+        });
+    } else {
+        advice.push({
+            title: "Maintain Safe Practices",
+            text: "Water appears safe. Ensure transport and storage containers are clean to prevent re-contamination.",
+            color: "text-emerald-200 bg-emerald-900/30 border-emerald-500/30",
+            link: { url: "https://www.who.int/teams/environment-climate-change-and-health/water-sanitation-and-health/water-safety-and-quality/household-water-treatment-and-safe-storage", label: "WHO: Safe Storage & Treatment" }
+        });
+    }
+    if (inputs.turbidity_visible) {
+        advice.push({
+            title: "Clear the Water",
+            text: "Turbidity reduces chlorine effectiveness. Filter through a cloth or let settle before treating.",
+            color: "text-purple-200 bg-purple-900/30 border-purple-500/30",
+            link: { url: "https://www.who.int/teams/environment-climate-change-and-health/water-sanitation-and-health/water-safety-and-quality/household-water-treatment-and-safe-storage", label: "WHO: Turbidity & Disinfection" }
+        });
+    }
+    if (inputs.storage_uncovered_over_24h || inputs.storage_uncovered_over_48h || inputs.animals_access_or_open_container) {
+        advice.push({
+            title: "Sanitize Storage",
+            text: "Scrub the storage container with soap and water. Keep it covered and elevated off the ground.",
+            color: "text-blue-200 bg-blue-900/30 border-blue-500/30",
+            link: { url: "https://www.who.int/teams/environment-climate-change-and-health/water-sanitation-and-health/water-safety-and-quality/household-water-treatment-and-safe-storage", label: "WHO: Safe Storage Guide" }
+        });
+    }
+    if (inputs.latrine_under_10m || inputs.latrine_10_to_30m) {
+        advice.push({
+            title: "Source Protection",
+            text: "Inspect the well apron/head for cracks. Divert runoff away from the water source.",
+            color: "text-orange-200 bg-orange-900/30 border-orange-500/30",
+            link: { url: "https://www.who.int/teams/environment-climate-change-and-health/water-sanitation-and-health/water-safety-and-quality/water-safety-planning", label: "WHO: Water Safety Planning" }
+        });
+    }
+    return advice;
+}
+
+// --- 6. UI BINDINGS ---
+
+// Improvement C: Fixed seed with resample button
+let currentSeed = 12345;
+
+function resampleRisk() {
+    currentSeed = Date.now();
+    updateUI();
+}
+
+const ctx = document.getElementById('decayChart').getContext('2d');
+Chart.defaults.color = '#94a3b8'; // Slate-400 for text
+Chart.defaults.borderColor = 'rgba(255, 255, 255, 0.1)'; // faint lines
+
+let decayChart = new Chart(ctx, {
+    type: 'line',
+    data: {
+        labels: [0, 12, 24, 36, 48, 72, 96, 120],
+        datasets: [{
+            label: 'Risk Contribution Multiplier',
+            data: [],
+            borderColor: COLORS.chart.line,
+            backgroundColor: COLORS.chart.fill,
+            fill: true,
+            tension: 0.4,
+            pointBackgroundColor: COLORS.chart.point,
+            pointBorderColor: COLORS.chart.line,
+            pointBorderWidth: 2
+        }]
+    },
+    options: {
+        responsive: true,
+        maintainAspectRatio: false, // Ensures graph fills container without getting too tall
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { min: 0, max: 1.1, grid: { color: 'rgba(255, 255, 255, 0.05)' } },
+            x: { title: { display: true, text: 'Hours Since Event' }, grid: { display: false } }
+        }
+    }
+});
+
+function getInputs() {
+    const latrineVal = document.querySelector('input[name="latrine"]:checked').value;
+    const storageVal = document.querySelector('input[name="storage"]:checked').value;
+    const hasRain = document.getElementById('heavy_rain').checked || document.getElementById('flooding').checked;
+    return {
+        source_type: document.getElementById('source_type').value,
+        is_vulnerable: document.getElementById('is_vulnerable').checked,
+        heavy_rain: document.getElementById('heavy_rain').checked,
+        flooding: document.getElementById('flooding').checked,
+        hours_since_rain_or_flood: hasRain ? parseInt(document.getElementById('hours_since').value) : null,
+        turbidity_visible: document.getElementById('turbidity_visible').checked,
+        smell_or_taste_change: document.getElementById('smell_or_taste_change').checked,
+        latrine_10_to_30m: latrineVal === '10_to_30',
+        latrine_under_10m: latrineVal === 'under_10',
+        storage_uncovered_over_24h: storageVal === '24h',
+        storage_uncovered_over_48h: storageVal === '48h',
+        animals_access_or_open_container: false,
+        dirty_fetch_container: false,
+        diarrhoea_signal_mild: false,
+        diarrhoea_signal_strong: false
+    };
+}
+
+function updateUI() {
+    const inputs = getInputs();
+    const hasRain = inputs.heavy_rain || inputs.flooding;
+    const slider = document.getElementById('hours_since');
+    slider.disabled = !hasRain;
+    slider.parentElement.classList.toggle('opacity-30', !hasRain);
+    document.getElementById('hours_display').textContent = hasRain ? inputs.hours_since_rain_or_flood + 'h' : 'N/A';
+    
+    // Improvement C: Use fixed seed
+    const result = computeRisk(inputs, MODEL, currentSeed); 
+    
+    // Update Gauge
+    const pct = Math.round(result.P * 100);
+    const arc = document.getElementById('gauge_arc');
+    const text = document.getElementById('percent_text');
+    const maxLen = 126; 
+    const dash = (pct / 100) * maxLen;
+    arc.style.strokeDasharray = `${dash}, 1000`;
+    text.textContent = `${pct}%`;
+    
+    // Use COLORS constant (Improvement B)
+    const colorSet = COLORS[result.category];
+    arc.style.stroke = colorSet.hex;
+    arc.style.filter = `drop-shadow(0 0 8px ${colorSet.rgb})`;
+    const badge = document.getElementById('risk_badge');
+    badge.textContent = result.category;
+    badge.className = `px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider shadow-lg backdrop-blur-md ${colorSet.badge}`;
+
+    // Update CI Bar
+    const ciBar = document.getElementById('ci_bar');
+    const medMark = document.getElementById('median_marker');
+    ciBar.style.left = (result.min * 100) + '%';
+    ciBar.style.width = ((result.max - result.min) * 100) + '%';
+    medMark.style.left = (result.P * 100) + '%';
+    
+    document.getElementById('ci_low').textContent = result.min.toFixed(2);
+    document.getElementById('ci_median').textContent = result.P.toFixed(2);
+    document.getElementById('ci_high').textContent = result.max.toFixed(2);
+
+    // List Reasons
+    const list = document.getElementById('reasons_list');
+    list.innerHTML = "";
+    if (result.contributions.length === 0) {
+         list.innerHTML = `<li class="text-slate-500 italic">No significant risk factors (baseline only)</li>`;
+    } else {
+        result.contributions.slice(0, 4).forEach(c => {
+            const li = document.createElement('li');
+            li.className = "flex justify-between items-center p-2 rounded hover:bg-white/5 transition";
+            const name = c.key.replace(/_/g, ' ').replace('interaction', '⚡ Interaction');
+            li.innerHTML = `<span class="text-slate-300">${name}</span> <span class="font-mono text-xs text-cyan-400 bg-cyan-900/30 px-1.5 py-0.5 rounded border border-cyan-500/20">+${c.value.toFixed(2)}</span>`;
+            list.appendChild(li);
+        });
+    }
+
+    // Update Mitigation
+    const adviceList = getMitigationAdvice(result, inputs);
+    const adviceContainer = document.getElementById('mitigation_list');
+    adviceContainer.innerHTML = "";
+    adviceList.forEach(item => {
+        const div = document.createElement('div');
+        div.className = `p-4 rounded-lg border text-sm ${item.color} flex flex-col justify-between backdrop-blur-sm`;
+        let html = `<div><strong class="block mb-2 text-base font-semibold tracking-tight">${item.title}</strong><p class="leading-relaxed opacity-90">${item.text}</p></div>`;
+        if (item.link) {
+            html += `<div class="mt-4 pt-3 border-t border-black/10 text-xs">
+                <a href="${item.link.url}" target="_blank" class="underline font-semibold hover:text-white transition-colors flex items-center gap-1.5 opacity-80 hover:opacity-100">
+                    <i class="fas fa-external-link-alt"></i> ${item.link.label}
+                </a>
+            </div>`;
+        }
+        div.innerHTML = html;
+        adviceContainer.appendChild(div);
+    });
+    
+    // Update Decay Chart
+    const hours = [0, 12, 24, 36, 48, 72, 96, 120];
+    decayChart.data.datasets[0].data = hours.map(h => decay(h, MODEL.decay.tau_hours, MODEL.decay.max_effect_hours));
+    decayChart.update();
+}
+
+// --- 7. TEST SUITE (with Golden Tests for WASM matching) ---
+const BASE_TEST_INPUTS = { is_vulnerable: false, heavy_rain: false, flooding: false, hours_since_rain_or_flood: null, turbidity_visible: false, smell_or_taste_change: false, storage_uncovered_over_24h: false, storage_uncovered_over_48h: false, animals_access_or_open_container: false, latrine_under_10m: false, latrine_10_to_30m: false, dirty_fetch_container: false, diarrhoea_signal_mild: false, diarrhoea_signal_strong: false };
+
+// Helper for golden tests: assert value within tolerance
+function assertApprox(actual, expected, tol, msg) {
+    if (Math.abs(actual - expected) > tol) {
+        throw new Error(msg + ": expected " + expected.toFixed(4) + ", got " + actual.toFixed(4));
+    }
+}
+
+const TESTS = [
+    // --- Behavioral Tests ---
+    { name: "Baseline (Piped)", fn: () => { const r = computeRisk({...BASE_TEST_INPUTS, source_type: "piped_chlorinated"}, MODEL); if(r.category!=="low") throw new Error("Not Low"); } },
+    { name: "Unprotected + Rain", fn: () => { const r = computeRisk({...BASE_TEST_INPUTS, source_type: "unprotected_well", heavy_rain: true, hours_since_rain_or_flood: 12}, MODEL); if(r.category!=="high") throw new Error("Not High"); } },
+    { name: "Latrine Exclusivity", fn: () => { const r = computeRisk({...BASE_TEST_INPUTS, source_type: "protected_well", latrine_under_10m: true, latrine_10_to_30m: true}, MODEL); if(r.contributions.some(c=>c.key==="latrine_10_to_30m")) throw new Error("Double Count"); } },
+    { name: "Storage Exclusivity", fn: () => { const r = computeRisk({...BASE_TEST_INPUTS, source_type: "protected_well", storage_uncovered_over_48h: true, storage_uncovered_over_24h: true}, MODEL); if(r.contributions.some(c=>c.key==="storage_uncovered_over_24h")) throw new Error("Double Count"); } },
+    { name: "Diarrhoea Exclusivity", fn: () => { const r = computeRisk({...BASE_TEST_INPUTS, source_type: "protected_well", diarrhoea_signal_mild: true, diarrhoea_signal_strong: true}, MODEL); if(r.contributions.some(c=>c.key==="diarrhoea_signal_mild")) throw new Error("Double Count"); } },
+    { name: "Vulnerability Shift", fn: () => { const i = {...BASE_TEST_INPUTS, source_type: "protected_well", storage_uncovered_over_24h: true}; const s = computeRisk(i, MODEL).category; const v = computeRisk({...i, is_vulnerable: true}, MODEL).category; if(s===v) throw new Error("No shift"); } },
+
+    // --- Golden Tests (seed=12345, exact values for WASM matching) ---
+    { name: "Golden #1: Piped Baseline", fn: () => {
+        const r = computeRisk({...BASE_TEST_INPUTS, source_type: "piped_chlorinated"}, MODEL, 12345);
+        assertApprox(r.P, 0.0477, 0.005, "P");
+        assertApprox(r.min, 0.0299, 0.005, "min");
+        assertApprox(r.max, 0.0744, 0.005, "max");
+    }},
+    { name: "Golden #2: Surface Water", fn: () => {
+        const r = computeRisk({...BASE_TEST_INPUTS, source_type: "surface_water"}, MODEL, 12345);
+        assertApprox(r.P, 0.5796, 0.01, "P");
+        assertApprox(r.min, 0.3751, 0.01, "min");
+        assertApprox(r.max, 0.7562, 0.01, "max");
+    }},
+    { name: "Golden #3: Flood + Decay h=12", fn: () => {
+        const r = computeRisk({...BASE_TEST_INPUTS, source_type: "protected_well", flooding: true, hours_since_rain_or_flood: 12}, MODEL, 12345);
+        assertApprox(r.P, 0.6628, 0.02, "P");
+    }},
+    { name: "Golden #4: Flood + Decay h=72", fn: () => {
+        const r = computeRisk({...BASE_TEST_INPUTS, source_type: "protected_well", flooding: true, hours_since_rain_or_flood: 72}, MODEL, 12345);
+        assertApprox(r.P, 0.3131, 0.02, "P");
+    }},
+    { name: "Golden #5: Interaction Term", fn: () => {
+        const r = computeRisk({...BASE_TEST_INPUTS, source_type: "unprotected_well", heavy_rain: true, hours_since_rain_or_flood: 6}, MODEL, 12345);
+        if (!r.contributions.some(c => c.key === "interaction")) throw new Error("Missing interaction");
+    }},
+    { name: "Golden #6: Full Risk Stack", fn: () => {
+        const r = computeRisk({...BASE_TEST_INPUTS, source_type: "unprotected_well", heavy_rain: true, hours_since_rain_or_flood: 6, turbidity_visible: true, latrine_under_10m: true, storage_uncovered_over_48h: true}, MODEL, 12345);
+        if (r.category !== "high") throw new Error("Expected high");
+        assertApprox(r.P, 0.9968, 0.005, "P");
+    }}
+];
+
+function runTests() {
+    const c = document.getElementById('test_console');
+    const s = document.getElementById('test_status');
+    c.innerHTML = ""; s.textContent = "RUNNING..."; s.className = "text-xs uppercase tracking-wider text-yellow-400 font-mono";
+    setTimeout(() => { 
+        let p = 0;
+        TESTS.forEach((t, i) => {
+            try { t.fn(); c.innerHTML += `<div class="text-emerald-400">✔ ${t.name}</div>`; p++; } 
+            catch (e) { c.innerHTML += `<div class="text-red-400">✘ ${t.name} (${e.message})</div>`; }
+        });
+        if(p===TESTS.length) { s.textContent = "PASS"; s.className = "text-xs uppercase tracking-wider text-emerald-400 font-mono"; } 
+        else { s.textContent = "FAIL"; s.className = "text-xs uppercase tracking-wider text-red-400 font-mono"; }
+    }, 100);
+}
+
+// --- BACTERIA/LOCATION FUNCTIONS ---
+function detectLocation() {
+    const status = document.getElementById('location_status');
+    const detected = document.getElementById('detected_location');
+    status.classList.remove('hidden');
+    detected.classList.add('hidden');
+
+    if (!navigator.geolocation) {
+        status.innerHTML = '<span class="text-red-400">Geolocation not supported</span>';
+        return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+        async (position) => {
+            try {
+                const lat = position.coords.latitude;
+                const lon = position.coords.longitude;
+                const resp = await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+                const data = await resp.json();
+                const country = data.address?.country_code?.toUpperCase() || '';
+                const countryName = data.address?.country || 'Unknown';
+
+                status.classList.add('hidden');
+                detected.classList.remove('hidden');
+                detected.innerHTML = `<i class="fas fa-check-circle text-emerald-400"></i> ${countryName}`;
+
+                const region = COUNTRY_TO_REGION[country] || 'europe';
+                document.getElementById('region_select').value = region;
+                updateBacteria();
+            } catch (e) {
+                status.innerHTML = '<span class="text-red-400">Could not detect region</span>';
+            }
+        },
+        (error) => {
+            status.innerHTML = '<span class="text-yellow-400">Location denied - please select manually</span>';
+        }
+    );
+}
+
+function updateBacteria() {
+    const region = document.getElementById('region_select').value;
+    const container = document.getElementById('bacteria_content');
+
+    if (!region) {
+        container.innerHTML = `
+            <div class="text-center py-4">
+                <i class="fas fa-map-marker-alt text-2xl mb-2 opacity-30"></i>
+                <p>Select your region to see common waterborne bacteria</p>
+            </div>`;
+        return;
+    }
+
+    const globalBacteria = BACTERIA_DB.global || [];
+    const regionalBacteria = BACTERIA_DB[region] || [];
+    const allBacteria = [...regionalBacteria, ...globalBacteria];
+
+    const severityColors = {
+        critical: 'bg-red-900/40 border-red-500/40 text-red-200',
+        high: 'bg-orange-900/40 border-orange-500/40 text-orange-200',
+        moderate: 'bg-yellow-900/40 border-yellow-500/40 text-yellow-200',
+        low: 'bg-emerald-900/40 border-emerald-500/40 text-emerald-200'
+    };
+
+    const severityLabels = {
+        critical: '🚨 CRITICAL',
+        high: '⚠️ HIGH',
+        moderate: '⚡ MODERATE',
+        low: '✅ LOW'
+    };
+
+    let html = '<div class="space-y-3">';
+
+    allBacteria.forEach(b => {
+        const color = severityColors[b.severity] || severityColors.moderate;
+        const label = severityLabels[b.severity] || '⚡ MODERATE';
+
+        html += `
+            <div class="${color} border rounded-xl p-4">
+                <div class="flex items-start justify-between mb-2">
+                    <div class="flex items-center gap-2">
+                        <span class="text-2xl">${b.emoji}</span>
+                        <div>
+                            <h4 class="font-bold text-white">${b.name}</h4>
+                            <p class="text-xs opacity-80">${b.disease}</p>
+                        </div>
+                    </div>
+                    <span class="text-[10px] font-bold uppercase tracking-wider opacity-70">${label}</span>
+                </div>
+                <div class="text-xs mt-2 pt-2 border-t border-white/10">
+                    <span class="opacity-70">Symptoms:</span> ${b.symptoms}
+                </div>
+            </div>`;
+    });
+
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function resetInputs() {
+    document.getElementById('source_type').value = "piped_chlorinated";
+    document.getElementById('is_vulnerable').checked = false;
+    document.getElementById('heavy_rain').checked = false;
+    document.getElementById('flooding').checked = false;
+    document.getElementById('turbidity_visible').checked = false;
+    document.getElementById('smell_or_taste_change').checked = false;
+    document.querySelector('input[name="latrine"][value="none"]').checked = true;
+    document.querySelector('input[name="storage"][value="none"]').checked = true;
+    document.getElementById('region_select').value = '';
+    document.getElementById('bacteria_content').innerHTML = '<div class="text-center py-4"><i class="fas fa-map-marker-alt text-2xl mb-2 opacity-30"></i><p>Select your region to see common waterborne bacteria</p></div>';
+    document.getElementById('location_status').classList.add('hidden');
+    document.getElementById('detected_location').classList.add('hidden');
+    currentSeed = 12345; // Reset to deterministic seed
+    updateUI();
+}
+
+resetInputs();
+
+// --- INITIALIZATION ---
+document.addEventListener('DOMContentLoaded', function() {
+    const savedLang = localStorage.getItem('waterSafetyLang');
+    if (savedLang && LANG[savedLang]) {
+        setLanguage(savedLang);
+    } else {
+        document.getElementById('lang_modal').style.display = 'flex';
+    }
+});
+
+</script>
+</body>
+</html>

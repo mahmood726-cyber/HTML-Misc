@@ -1,0 +1,126 @@
+<!DOCTYPE html><html><head><title>NMA Pro v7.0 - Full Report</title>
+<style>
+body{font-family:'Segoe UI',system-ui,sans-serif;max-width:1000px;margin:40px auto;padding:20px;color:#1e293b;line-height:1.6}
+h1{color:#0891b2;border-bottom:3px solid #0891b2;padding-bottom:10px}
+h2{color:#334155;border-bottom:2px solid #e2e8f0;padding-bottom:8px;margin-top:30px}
+h3{color:#475569;margin-top:20px}
+table{border-collapse:collapse;width:100%;margin:15px 0;font-size:13px}
+th,td{border:1px solid #e2e8f0;padding:8px 10px;text-align:left}
+th{background:#f1f5f9;font-weight:600}
+.stat{font-family:'Consolas',monospace}
+.sig{background:#fef3c7;font-weight:600}
+.diag{background:#f1f5f9;font-weight:600;text-align:center}
+.note{font-size:12px;color:#64748b;font-style:italic;margin-top:5px}
+.league{font-size:11px}
+.league th,.league td{padding:4px 6px;text-align:center}
+.section{background:#f8fafc;padding:15px;border-radius:8px;margin:15px 0}
+ul{margin:10px 0}
+li{margin:5px 0}
+.highlight{background:#ecfdf5;padding:2px 6px;border-radius:4px}
+@media print{body{max-width:100%}h2{page-break-before:auto}}
+</style></head><body>
+<h1>Network Meta-Analysis Report</h1>
+<div class="section">
+<p><strong>Generated:</strong> 15/01/2026, 12:56:51</p>
+<p><strong>Software:</strong> NMA Pro v7.0 (Browser-based)</p>
+</div>
+
+<h2>1. Methods</h2>
+<h3>1.1 Statistical Framework</h3>
+<p>Network meta-analysis was performed using a frequentist random-effects model within a graph-theoretical framework.
+The analysis synthesizes direct and indirect evidence across the treatment network to estimate relative treatment effects for all pairwise comparisons.</p>
+
+<h3>1.2 Effect Measure and Model Specification</h3>
+<ul>
+<li><strong>Effect measure:</strong> Odds Ratio (OR)</li>
+<li><strong>Model:</strong> Random-effects model with common heterogeneity</li>
+<li><strong>Heterogeneity estimator:</strong> Restricted Maximum Likelihood (REML)</li>
+<li><strong>Reference treatment:</strong> Abb</li>
+<li><strong>Direction of effect:</strong> Lower values indicate benefit</li>
+</ul>
+
+<h3>1.3 Assumptions</h3>
+<p>The analysis assumes transitivity (treatments are jointly randomizable) and consistency (agreement between direct and indirect evidence).
+Consistency was evaluated using node-splitting analysis where loops of evidence exist.</p>
+
+<h3>1.4 Ranking Methods</h3>
+<p>Treatment rankings were computed using P-scores (frequentist analogue of SUCRA), which estimate the probability that each treatment
+is better than any other treatment, averaged across all comparisons (Rücker & Schwarzer, BMC Med Res Methodol 2015).</p>
+
+<h3>1.5 Quality Assessment</h3>
+<p>Confidence in evidence was assessed using the CINeMA framework (Nikolakopoulou et al., PLoS Med 2020) and GRADE-NMA approach
+(Puhan et al., J Clin Epidemiol 2014), evaluating within-study bias, reporting bias, indirectness, imprecision, heterogeneity, and incoherence.</p>
+
+<h2>2. Network Characteristics</h2>
+<div class="section">
+<ul>
+<li><strong>Number of studies:</strong> 10</li>
+<li><strong>Number of treatments:</strong> 6</li>
+<li><strong>Treatments:</strong> Abb, Lan, SK, TNK, rPA, tPA</li>
+<li><strong>Total pairwise comparisons:</strong> 6</li>
+<li><strong>Network geometry:</strong> 0 direct comparisons</li>
+</ul>
+</div>
+
+<h2>3. Heterogeneity Assessment</h2>
+<div class="section">
+<ul>
+<li><strong>Between-study variance (τ²):</strong> <span class="stat">0.0799</span></li>
+<li><strong>τ (standard deviation):</strong> <span class="stat">0.2827</span></li>
+<li><strong>I² statistic:</strong> <span class="stat">73.8%</span>
+(substantial heterogeneity)</li>
+<li><strong>Cochran's Q:</strong> <span class="stat">19.07</span> (df=5)</li>
+<li><strong>P-value for heterogeneity:</strong> <span class="stat">0.002</span></li>
+</ul>
+<p class="note">Interpretation: I² represents the percentage of variability due to heterogeneity rather than sampling error (Higgins & Thompson, Stat Med 2002).</p>
+</div>
+
+<h2>4. Treatment Effects</h2>
+<h3>4.1 League Table</h3>
+<p>Each cell shows the odds ratio (95% CI) for the row treatment versus the column treatment.
+Values &lt;1 favor the row treatment.</p>
+<table class="league"><tr><th></th><th>Abb</th><th>Lan</th><th>SK</th><th>TNK</th><th>rPA</th><th>tPA</th></tr><tr><th>Abb</th><td class="diag">Abb</td><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><th>Lan</th><td>—</td><td class="diag">Lan</td><td>—</td><td>—</td><td>—</td><td>—</td></tr><tr><th>SK</th><td>—</td><td>—</td><td class="diag">SK</td><td>—</td><td>—</td><td>—</td></tr><tr><th>TNK</th><td>—</td><td>—</td><td>—</td><td class="diag">TNK</td><td>—</td><td>—</td></tr><tr><th>rPA</th><td>—</td><td>—</td><td>—</td><td>—</td><td class="diag">rPA</td><td>—</td></tr><tr><th>tPA</th><td>—</td><td>—</td><td>—</td><td>—</td><td>—</td><td class="diag">tPA</td></tr></table>
+
+<h3>4.2 Pairwise Comparisons (vs. Reference: Abb)</h3>
+<table><tr><th>Comparison</th><th>Odds Ratio</th><th>95% CI</th><th>P-value</th><th>Significant</th></tr><tr><td>beta</td><td class="stat">NaN</td><td class="stat">NaN - NaN</td><td class="stat">N/A</td><td class="">No</td></tr><tr><td>vcov</td><td class="stat">NaN</td><td class="stat">NaN - NaN</td><td class="stat">N/A</td><td class="">No</td></tr><tr><td>effects</td><td class="stat">NaN</td><td class="stat">NaN - NaN</td><td class="stat">N/A</td><td class="">No</td></tr><tr><td>correctionFactor</td><td class="stat">NaN</td><td class="stat">NaN - NaN</td><td class="stat">N/A</td><td class="">No</td></tr><tr><td>correctionMethod</td><td class="stat">NaN</td><td class="stat">NaN - NaN</td><td class="stat">N/A</td><td class="">No</td></tr><tr><td>df</td><td class="stat">NaN</td><td class="stat">NaN - NaN</td><td class="stat">N/A</td><td class="">No</td></tr></table>
+
+<h2>5. Treatment Rankings</h2>
+<p>Rankings based on P-scores, where higher values indicate better performance according to the specified direction of effect.</p>
+<table>
+<tr><th>Rank</th><th>Treatment</th><th>P-score</th><th>SUCRA (%)</th><th>Mean Rank</th></tr>
+<tr style="background:#ecfdf5"><td><strong>1</strong></td><td>TNK</td><td class="stat">0.854</td><td class="stat">85.4</td><td class="stat">2.21</td></tr><tr><td><strong>2</strong></td><td>rPA</td><td class="stat">0.566</td><td class="stat">56.6</td><td class="stat">3.32</td></tr><tr><td><strong>3</strong></td><td>tPA</td><td class="stat">0.439</td><td class="stat">43.9</td><td class="stat">3.69</td></tr><tr><td><strong>4</strong></td><td>Lan</td><td class="stat">0.411</td><td class="stat">41.1</td><td class="stat">3.82</td></tr><tr><td><strong>5</strong></td><td>Abb</td><td class="stat">0.383</td><td class="stat">38.3</td><td class="stat">4.07</td></tr><tr><td><strong>6</strong></td><td>SK</td><td class="stat">0.346</td><td class="stat">34.6</td><td class="stat">3.89</td></tr>
+</table>
+<p class="note">P-score: probability of being the best treatment. SUCRA: Surface Under Cumulative Ranking curve.</p>
+
+
+<h2>Confidence in Network Meta-Analysis (CINeMA)</h2>
+<table><tr><th>Comparison</th><th>Within-study Bias</th><th>Reporting Bias</th><th>Indirectness</th><th>Imprecision</th><th>Heterogeneity</th><th>Incoherence</th><th>Overall</th></tr></table><p class="note">CINeMA framework per Nikolakopoulou et al., PLoS Med 2020</p>
+<h2>GRADE Assessment</h2>
+<table><tr><th>Comparison</th><th>Risk of Bias</th><th>Inconsistency</th><th>Indirectness</th><th>Imprecision</th><th>Pub Bias</th><th>Overall</th></tr></table><p class="note">GRADE-NMA per Puhan et al., J Clin Epidemiol 2014</p>
+<h2>Publication Bias Assessment</h2>
+<h3>Egger's Test</h3>
+<ul><li>Intercept: -1.707</li>
+<li>SE: N/A</li>
+<li>P-value: 0.044</li>
+<li>Interpretation: Evidence of small-study effects</li></ul>
+<h3>Begg's Test</h3>
+<ul><li>Kendall's τ: -0.467</li>
+<li>P-value: 0.060</li></ul>
+<h3>Trim and Fill</h3>
+<ul><li>Missing studies: 0</li>
+<li>Adjusted estimate: -0.156</li></ul>
+<p class="note">Methods: Egger et al., BMJ 1997; Begg & Mazumdar, Biometrics 1994; Duval & Tweedie, Biometrics 2000</p>
+
+
+<h2>References</h2>
+<ul style="font-size:12px">
+<li>Rücker G, Schwarzer G. Ranking treatments in frequentist network meta-analysis. BMC Med Res Methodol. 2015;15:58.</li>
+<li>Higgins JPT, Thompson SG. Quantifying heterogeneity in a meta-analysis. Stat Med. 2002;21:1539-58.</li>
+<li>Nikolakopoulou A, et al. CINeMA: An approach for assessing confidence in the results of a network meta-analysis. PLoS Med. 2020;17:e1003082.</li>
+<li>Puhan MA, et al. A GRADE Working Group approach for rating the quality of treatment effect estimates from network meta-analysis. BMJ. 2014;349:g5630.</li>
+<li>Dias S, et al. Checking consistency in mixed treatment comparison meta-analysis. Stat Med. 2010;29:932-44.</li>
+</ul>
+
+<hr>
+<p style="text-align:center;color:#64748b;font-size:12px"><em>Report generated by NMA Pro v7.0 — Comprehensive Network Meta-Analysis Tool</em></p>
+</body></html>

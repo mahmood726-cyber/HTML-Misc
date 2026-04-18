@@ -1,0 +1,713 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D Graphing Calculator</title>
+    <style>
+        :root {
+            --bg-color: #111827;
+            --panel-bg: rgba(31, 41, 55, 0.9);
+            --text-color: #e5e7eb;
+            --accent-color: #3b82f6;
+            --accent-hover: #2563eb;
+            --border-color: #374151;
+            --input-bg: #1f2937;
+        }
+
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+        }
+
+        #canvas-container {
+            width: 100vw;
+            height: 100vh;
+            display: block;
+        }
+
+        #ui-panel {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            width: 320px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 12px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            border: 1px solid var(--border-color);
+            max-height: 90vh;
+            overflow-y: auto;
+            transition: transform 0.3s ease;
+        }
+
+        #ui-panel.minimized {
+            transform: translateX(calc(-100% - 30px));
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        h1 {
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+            color: white;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .control-group {
+            margin-bottom: 15px;
+        }
+
+        label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 0.85rem;
+            color: #9ca3af;
+        }
+
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            background: #111827;
+            border: 1px solid var(--border-color);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
+            font-family: 'Menlo', 'Monaco', 'Courier New', monospace;
+            box-sizing: border-box;
+            transition: border-color 0.2s;
+        }
+
+        input[type="text"]:focus, input[type="number"]:focus {
+            outline: none;
+            border-color: var(--accent-color);
+        }
+
+        input[type="color"] {
+            width: 100%;
+            height: 35px;
+            padding: 2px;
+            background: var(--input-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .row {
+            display: flex;
+            gap: 10px;
+        }
+
+        .row > div {
+            flex: 1;
+        }
+
+        button {
+            width: 100%;
+            background: var(--accent-color);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: background 0.2s;
+        }
+
+        button:hover {
+            background: var(--accent-hover);
+        }
+
+        .toggle-btn {
+            background: transparent;
+            border: 1px solid var(--border-color);
+            color: #9ca3af;
+            font-size: 1.2rem;
+            width: auto;
+            padding: 4px 8px;
+            line-height: 1;
+        }
+        
+        .toggle-btn:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+        }
+
+        #toggle-panel-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 100;
+            background: var(--panel-bg);
+            border: 1px solid var(--border-color);
+            color: white;
+            width: 40px;
+            height: 40px;
+            border-radius: 8px;
+            display: none; /* Shown by JS if panel minimized */
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        #error-msg {
+            color: #ef4444;
+            font-size: 0.8rem;
+            margin-top: 8px;
+            min-height: 1.2em;
+        }
+
+        .help-text {
+            font-size: 0.75rem;
+            color: #6b7280;
+            margin-top: 4px;
+            line-height: 1.4;
+        }
+
+        .checkbox-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 10px;
+        }
+
+        .checkbox-group input {
+            width: auto;
+        }
+
+        .checkbox-group label {
+            margin: 0;
+            cursor: pointer;
+        }
+
+        /* Loading Overlay */
+        #loader {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: var(--bg-color);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 999;
+            transition: opacity 0.5s;
+        }
+
+        .spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #374151;
+            border-top: 4px solid var(--accent-color);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+
+        /* Formula tips */
+        .formula-tips {
+            background: rgba(0,0,0,0.2);
+            padding: 8px;
+            border-radius: 4px;
+            margin-top: 10px;
+        }
+        .tag {
+            display: inline-block;
+            background: #374151;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            margin: 2px;
+            cursor: pointer;
+        }
+        .tag:hover { background: #4b5563; }
+        
+        /* Magic Box */
+        .magic-box {
+            background: rgba(59, 130, 246, 0.1);
+            padding: 12px; 
+            border-radius: 8px; 
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            margin-bottom: 20px;
+        }
+        .magic-label {
+            color: #60a5fa;
+            font-weight: 600;
+            margin-bottom: 8px;
+            display: block;
+            font-size: 0.9rem;
+        }
+        .magic-input-group {
+            display: flex;
+            gap: 8px;
+        }
+        #magic-btn {
+            width: auto;
+            padding: 8px 16px;
+            background: #2563eb;
+        }
+        
+        .section-title {
+            color: #e5e7eb;
+            font-weight: 600;
+            margin: 15px 0 10px 0;
+            border-top: 1px solid #374151;
+            padding-top: 15px;
+            font-size: 0.9rem;
+        }
+
+    </style>
+    <!-- Import Three.js and OrbitControls -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+                "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+            }
+        }
+    </script>
+</head>
+<body>
+
+    <div id="loader"><div class="spinner"></div></div>
+
+    <button id="toggle-panel-btn">☰</button>
+
+    <div id="ui-panel">
+        <div class="panel-header">
+            <h1>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="M3 3v18h18"/>
+                    <path d="M18.7 8l-5.1 5.2-2.8-2.7L7 14.3"/>
+                </svg>
+                3D Grapher
+            </h1>
+            <button class="toggle-btn" id="hide-panel-btn">×</button>
+        </div>
+
+        <!-- Magic Generator Section -->
+        <div class="magic-box">
+            <label class="magic-label">✨ Shape Generator</label>
+            <div class="magic-input-group">
+                <input type="text" id="magic-input" placeholder="e.g. 'heart', 'cuboid', 'volcano'">
+                <button id="magic-btn">Go</button>
+            </div>
+            <div class="help-text">Try: heart, cuboid, volcano, city, star</div>
+        </div>
+
+        <div class="control-group">
+            <label for="equation">Equation (z = f(x,y))</label>
+            <input type="text" id="equation" value="sin(sqrt(x*x + y*y)) * 5" spellcheck="false">
+            <div id="error-msg"></div>
+        </div>
+
+        <div class="row">
+            <div class="control-group">
+                <label>Min</label>
+                <input type="number" id="range-min" value="-10">
+            </div>
+            <div class="control-group">
+                <label>Max</label>
+                <input type="number" id="range-max" value="10">
+            </div>
+        </div>
+
+        <div class="control-group">
+            <label for="resolution">Resolution (Grid Detail)</label>
+            <input type="number" id="resolution" value="100" min="10" max="300">
+        </div>
+
+        <!-- New Visuals Section -->
+        <div class="section-title">🎨 Visuals</div>
+        
+        <div class="row">
+            <div class="control-group">
+                <label>Low Color</label>
+                <input type="color" id="color-low" value="#0000ff">
+            </div>
+            <div class="control-group">
+                <label>High Color</label>
+                <input type="color" id="color-high" value="#ff0000">
+            </div>
+        </div>
+
+        <div class="control-group">
+             <div class="checkbox-group">
+                <input type="checkbox" id="show-wireframe" checked>
+                <label for="show-wireframe">Show Wireframe</label>
+            </div>
+            <div class="checkbox-group">
+                <input type="checkbox" id="auto-rotate">
+                <label for="auto-rotate">Auto Rotate</label>
+            </div>
+        </div>
+
+        <button id="update-btn">Update Graph</button>
+        
+        <div class="section-title">Quick Presets</div>
+        <div class="formula-tips">
+            <span class="tag" onclick="setInput('sin(x) * cos(y)')">Waves</span>
+            <span class="tag" onclick="setInput('x*x - y*y')">Saddle</span>
+            <span class="tag" onclick="setInput('10 - max(abs(x), abs(y))')">Pyramid</span>
+        </div>
+    </div>
+
+    <div id="canvas-container"></div>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+        // --- Configuration ---
+        const config = {
+            bgColor: 0x111827,
+            gridColor: 0x374151,
+            axesColor: 0x9ca3af
+        };
+
+        // --- Global Variables ---
+        let scene, camera, renderer, controls;
+        let graphMesh, wireframeMesh;
+        let axesHelper, gridHelper;
+
+        // UI Elements
+        const eqInput = document.getElementById('equation');
+        const rangeMinInput = document.getElementById('range-min');
+        const rangeMaxInput = document.getElementById('range-max');
+        const resInput = document.getElementById('resolution');
+        const errorMsg = document.getElementById('error-msg');
+        const wireframeToggle = document.getElementById('show-wireframe');
+        const rotateToggle = document.getElementById('auto-rotate');
+        const magicInput = document.getElementById('magic-input');
+        const magicBtn = document.getElementById('magic-btn');
+        const colorLowInput = document.getElementById('color-low');
+        const colorHighInput = document.getElementById('color-high');
+        
+        // --- Magic Shape Logic ---
+        const shapeDatabase = [
+            // Basic Shapes
+            { keys: ['sphere', 'ball', 'dome', 'planet'], eq: 'sqrt(max(0, 25 - x*x - y*y))', range: 6 },
+            { keys: ['ripple', 'water', 'pond', 'splash'], eq: 'sin(sqrt(x*x + y*y) * 2)', range: 10 },
+            { keys: ['cone', 'mountain', 'peak'], eq: '8 - sqrt(x*x + y*y)', range: 10 },
+            { keys: ['pyramid', 'egypt', 'triangle'], eq: '10 - max(abs(x), abs(y))', range: 10 },
+            { keys: ['saddle', 'horse'], eq: 'x*x/5 - y*y/5', range: 10 },
+            
+            // New Shapes
+            { keys: ['cuboid', 'cube', 'box', 'square', 'block'], eq: '(abs(x) < 4 && abs(y) < 4) ? 5 : 0', range: 10 },
+            { keys: ['heart', 'love', 'valentine'], eq: '(y > 0 ? sqrt(max(0, 1 - pow(abs(x)-1, 2) - y*y)) : sqrt(max(0, 1 - pow(abs(x)-1, 2) - y*y)) * 1.2) * 3', range: 4 },
+            { keys: ['volcano', 'magma', 'crater'], eq: '15*exp(-(x*x+y*y)/25) - 10*exp(-(x*x+y*y)/5)', range: 10 },
+            { keys: ['city', 'building', 'skyscraper'], eq: '(sin(x*2) > 0.5 && sin(y*2) > 0.5) ? (sin(x)+2 + cos(y)+2) : 0', range: 10 },
+            { keys: ['star', 'burst'], eq: 'max(0, cos(atan2(y, x) * 5) * 5 - sqrt(x*x+y*y))', range: 8 },
+            { keys: ['flower', 'rose', 'bloom'], eq: 'sin(5 * atan2(y, x)) * 3', range: 8 },
+            { keys: ['canyon', 'valley'], eq: '(abs(x) < 2) ? -5 : sin(x/2) + sin(y/2)', range: 10 },
+            { keys: ['waffle', 'grid'], eq: 'sin(x*2) * sin(y*2) > 0 ? 1 : 0', range: 10 },
+            { keys: ['egg'], eq: 'sqrt(max(0, 1 - x*x - y*y)) * (1 + 0.2*x)', range: 2 },
+            
+            // Abstract
+            { keys: ['wave', 'ocean', 'sea', 'surf'], eq: 'sin(x) + sin(y)', range: 10 },
+            { keys: ['bumpy', 'noise', 'rough', 'terrain'], eq: 'sin(x*1.5)*cos(y*1.5) + sin(x*3)*cos(y*3)*0.5', range: 8 },
+            { keys: ['spiral', 'vortex', 'swirl'], eq: 'sin(sqrt(x*x+y*y) - atan2(y,x)*5)', range: 10 },
+            { keys: ['hole', 'gravity', 'singularity'], eq: '-5 / (sqrt(x*x + y*y) + 0.5)', range: 5 },
+            { keys: ['stairs', 'step'], eq: 'floor(x) + floor(y)', range: 10 },
+        ];
+
+        function handleMagicCommand() {
+            const query = magicInput.value.toLowerCase().trim();
+            if (!query) return;
+
+            // Find best match
+            const match = shapeDatabase.find(shape => 
+                shape.keys.some(k => query.includes(k))
+            );
+
+            if (match) {
+                // Animate the inputs
+                eqInput.style.borderColor = '#3b82f6';
+                setTimeout(() => eqInput.style.borderColor = '#374151', 500);
+                
+                eqInput.value = match.eq;
+                rangeMinInput.value = -match.range;
+                rangeMaxInput.value = match.range;
+                
+                // Specific Colors for specific shapes?
+                if (query.includes('heart')) { colorHighInput.value = '#ff0000'; colorLowInput.value = '#550000'; }
+                if (query.includes('water') || query.includes('ocean')) { colorHighInput.value = '#00ffff'; colorLowInput.value = '#000055'; }
+                if (query.includes('volcano')) { colorHighInput.value = '#ff4400'; colorLowInput.value = '#331100'; }
+                if (query.includes('city')) { colorHighInput.value = '#aaaaaa'; colorLowInput.value = '#222222'; }
+                
+                generateGraph();
+            } else {
+                errorMsg.textContent = "Shape not found. Try 'heart', 'cuboid', or 'volcano'.";
+                setTimeout(() => errorMsg.textContent = '', 3000);
+            }
+        }
+
+        // --- Initialization ---
+        function init() {
+            const container = document.getElementById('canvas-container');
+            
+            // Scene
+            scene = new THREE.Scene();
+            scene.background = new THREE.Color(config.bgColor);
+            scene.fog = new THREE.FogExp2(config.bgColor, 0.015);
+
+            // Camera
+            camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 0.1, 1000);
+            camera.position.set(15, 15, 15);
+
+            // Renderer
+            renderer = new THREE.WebGLRenderer({ antialias: true });
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            renderer.setPixelRatio(window.devicePixelRatio);
+            container.appendChild(renderer.domElement);
+
+            // Controls
+            controls = new OrbitControls(camera, renderer.domElement);
+            controls.enableDamping = true;
+            controls.dampingFactor = 0.05;
+
+            // Lighting
+            const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+            scene.add(ambientLight);
+
+            const directionalLight = new THREE.DirectionalLight(0xffffff, 0.8);
+            directionalLight.position.set(10, 20, 10);
+            scene.add(directionalLight);
+            
+            const backLight = new THREE.DirectionalLight(0x445566, 0.5);
+            backLight.position.set(-10, -10, -5);
+            scene.add(backLight);
+
+            // Helpers
+            axesHelper = new THREE.AxesHelper(20);
+            scene.add(axesHelper);
+
+            // Initial Graph
+            generateGraph();
+
+            // Event Listeners
+            window.addEventListener('resize', onWindowResize);
+            document.getElementById('update-btn').addEventListener('click', generateGraph);
+            magicBtn.addEventListener('click', handleMagicCommand);
+            
+            // Enter key listeners
+            [eqInput, rangeMinInput, rangeMaxInput, resInput].forEach(el => {
+                el.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter') generateGraph();
+                });
+            });
+
+            magicInput.addEventListener('keydown', (e) => {
+                if (e.key === 'Enter') handleMagicCommand();
+            });
+
+            // Input Change listeners for colors
+            colorLowInput.addEventListener('input', generateGraph);
+            colorHighInput.addEventListener('input', generateGraph);
+
+            // Checkbox listeners
+            wireframeToggle.addEventListener('change', () => {
+                if(wireframeMesh) wireframeMesh.visible = wireframeToggle.checked;
+            });
+
+            // UI Panel Toggle
+            const uiPanel = document.getElementById('ui-panel');
+            const hideBtn = document.getElementById('hide-panel-btn');
+            const showBtn = document.getElementById('toggle-panel-btn');
+
+            hideBtn.addEventListener('click', () => {
+                uiPanel.classList.add('minimized');
+                showBtn.style.display = 'flex';
+            });
+
+            showBtn.addEventListener('click', () => {
+                uiPanel.classList.remove('minimized');
+                showBtn.style.display = 'none';
+            });
+
+            // Hide loader
+            document.getElementById('loader').style.opacity = '0';
+            setTimeout(() => document.getElementById('loader').remove(), 500);
+
+            animate();
+        }
+
+        // --- Math Evaluation ---
+        function createMathFunction(expression) {
+            try {
+                // Map generic math functions to global scope for the function
+                const mathKeys = Object.getOwnPropertyNames(Math);
+                const args = ['x', 'y'];
+                const body = `
+                    const { ${mathKeys.join(', ')} } = Math;
+                    return ${expression};
+                `;
+                return new Function(...args, body);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        // --- Graph Generation Logic ---
+        function generateGraph() {
+            const equationStr = eqInput.value;
+            const xMin = parseFloat(rangeMinInput.value);
+            const xMax = parseFloat(rangeMaxInput.value);
+            const segments = parseInt(resInput.value);
+            const range = xMax - xMin;
+            
+            // Clean up old graph
+            if (graphMesh) {
+                scene.remove(graphMesh);
+                graphMesh.geometry.dispose();
+                graphMesh.material.dispose();
+            }
+            if (wireframeMesh) {
+                scene.remove(wireframeMesh);
+                wireframeMesh.geometry.dispose();
+                wireframeMesh.material.dispose();
+            }
+            if (gridHelper) {
+                scene.remove(gridHelper);
+            }
+
+            // Reset Error
+            errorMsg.textContent = '';
+
+            // Create Function
+            const userFunc = createMathFunction(equationStr);
+            if (!userFunc) {
+                errorMsg.textContent = "Invalid syntax.";
+                return;
+            }
+
+            // Test function once
+            try {
+                userFunc(0, 0);
+            } catch (e) {
+                errorMsg.textContent = "Error in formula: " + e.message;
+                return;
+            }
+
+            // Create Geometry
+            const geometry = new THREE.PlaneGeometry(range, range, segments, segments);
+            geometry.rotateX(-Math.PI / 2); // Now plane is XZ
+
+            const posAttribute = geometry.attributes.position;
+            const vertex = new THREE.Vector3();
+
+            const colors = [];
+            let minZ = Infinity;
+            let maxZ = -Infinity;
+
+            // 1. Calculate Positions & Find Min/Max Height
+            for (let i = 0; i < posAttribute.count; i++) {
+                vertex.fromBufferAttribute(posAttribute, i);
+                
+                const centerX = (xMin + xMax) / 2;
+                const centerY = (xMin + xMax) / 2; 
+                
+                const mathX = vertex.x + centerX;
+                const mathY = vertex.z + centerY; 
+
+                let mathZ = 0;
+                try {
+                    mathZ = userFunc(mathX, mathY);
+                    if (!isFinite(mathZ) || isNaN(mathZ)) mathZ = 0;
+                } catch (e) {
+                    mathZ = 0;
+                }
+
+                vertex.y = mathZ;
+                
+                if (mathZ < minZ) minZ = mathZ;
+                if (mathZ > maxZ) maxZ = mathZ;
+
+                posAttribute.setY(i, mathZ);
+            }
+
+            // 2. Color Mapping
+            const cLow = new THREE.Color(colorLowInput.value);
+            const cHigh = new THREE.Color(colorHighInput.value);
+            const tempColor = new THREE.Color();
+
+            for (let i = 0; i < posAttribute.count; i++) {
+                const height = posAttribute.getY(i);
+                let t = 0.5;
+                if (maxZ !== minZ) {
+                    t = (height - minZ) / (maxZ - minZ);
+                }
+                
+                // Lerp between the user chosen colors
+                // FIXED: Use lerpColors instead of lerpVectors
+                tempColor.lerpColors(cLow, cHigh, t);
+                colors.push(tempColor.r, tempColor.g, tempColor.b);
+            }
+
+            geometry.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
+            geometry.computeVertexNormals();
+
+            // Materials
+            const material = new THREE.MeshPhongMaterial({
+                side: THREE.DoubleSide,
+                vertexColors: true,
+                shininess: 50,
+                specular: 0x222222
+            });
+
+            graphMesh = new THREE.Mesh(geometry, material);
+            scene.add(graphMesh);
+
+            // Wireframe Overlay
+            const wfGeo = new THREE.WireframeGeometry(geometry);
+            const wfMat = new THREE.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.15 });
+            wireframeMesh = new THREE.LineSegments(wfGeo, wfMat);
+            wireframeMesh.visible = wireframeToggle.checked;
+            scene.add(wireframeMesh);
+
+            // Add Reference Grid
+            gridHelper = new THREE.GridHelper(range, 20, 0x555555, 0x222222);
+            scene.add(gridHelper);
+        }
+
+        window.setInput = (val) => {
+            eqInput.value = val;
+            generateGraph();
+        };
+
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (rotateToggle.checked && graphMesh) {
+                graphMesh.rotation.y += 0.005;
+                if(wireframeMesh) wireframeMesh.rotation.y += 0.005;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+
+        init();
+
+    </script>
+</body>
+</html>

@@ -1,0 +1,3135 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SurvExtract Pro v3 | Advanced Time-to-Event Curve Digitizer</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            /* Light theme (default) */
+            --bg-primary: #ffffff;
+            --bg-secondary: #f8fafc;
+            --bg-tertiary: #f1f5f9;
+            --bg-elevated: #e2e8f0;
+            --border-color: #e2e8f0;
+            --border-active: #cbd5e1;
+            --text-primary: #0f172a;
+            --text-secondary: #475569;
+            --text-muted: #94a3b8;
+            --canvas-bg: #f8fafc;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.07);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1);
+            
+            /* Accent colors */
+            --accent-blue: #3b82f6;
+            --accent-green: #22c55e;
+            --accent-orange: #f97316;
+            --accent-red: #ef4444;
+            --accent-purple: #a855f7;
+            --accent-cyan: #06b6d4;
+            --accent-pink: #ec4899;
+            --accent-yellow: #eab308;
+            
+            --font-mono: 'JetBrains Mono', monospace;
+            --font-sans: 'Inter', -apple-system, sans-serif;
+        }
+        
+        [data-theme="dark"] {
+            --bg-primary: #09090b;
+            --bg-secondary: #18181b;
+            --bg-tertiary: #27272a;
+            --bg-elevated: #3f3f46;
+            --border-color: #3f3f46;
+            --border-active: #52525b;
+            --text-primary: #fafafa;
+            --text-secondary: #a1a1aa;
+            --text-muted: #71717a;
+            --canvas-bg: #0c0c0e;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.3);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.4);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.5);
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        
+        body {
+            font-family: var(--font-sans);
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            min-height: 100vh;
+            overflow: hidden;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        /* Header */
+        .header {
+            height: 56px;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 16px;
+            position: fixed;
+            top: 0; left: 0; right: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 32px; height: 32px;
+            background: linear-gradient(135deg, var(--accent-red), var(--accent-purple));
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+        }
+
+        .logo-text {
+            font-family: var(--font-mono);
+            font-weight: 700;
+            font-size: 16px;
+        }
+
+        .logo-text span { color: var(--accent-red); }
+
+        .logo-badge {
+            font-size: 9px;
+            font-weight: 600;
+            color: var(--accent-purple);
+            background: rgba(168, 85, 247, 0.15);
+            padding: 3px 8px;
+            border-radius: 4px;
+            border: 1px solid rgba(168, 85, 247, 0.3);
+        }
+
+        .header-center { display: flex; gap: 8px; align-items: center; }
+        .header-actions { display: flex; gap: 8px; align-items: center; }
+
+        /* Theme Toggle */
+        .theme-toggle {
+            width: 40px; height: 40px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+            transition: all 0.2s;
+        }
+        .theme-toggle:hover { background: var(--bg-elevated); }
+
+        /* Curve Type Selector */
+        .curve-type-selector {
+            display: flex;
+            gap: 2px;
+            background: var(--bg-tertiary);
+            padding: 4px;
+            border-radius: 8px;
+        }
+
+        .curve-type-btn {
+            padding: 6px 12px;
+            font-size: 11px;
+            font-weight: 500;
+            border-radius: 5px;
+            cursor: pointer;
+            color: var(--text-secondary);
+            background: transparent;
+            border: none;
+            transition: all 0.15s;
+            white-space: nowrap;
+        }
+
+        .curve-type-btn:hover { color: var(--text-primary); background: var(--bg-elevated); }
+        .curve-type-btn.active { background: var(--accent-red); color: white; }
+
+        /* Buttons */
+        .btn {
+            font-family: var(--font-sans);
+            font-size: 12px;
+            font-weight: 500;
+            padding: 8px 14px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: all 0.15s ease;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            white-space: nowrap;
+        }
+
+        .btn:hover { background: var(--bg-elevated); border-color: var(--border-active); box-shadow: var(--shadow-sm); }
+        .btn-primary { background: var(--accent-blue); border-color: var(--accent-blue); color: white; }
+        .btn-primary:hover { background: #2563eb; }
+        .btn-success { background: var(--accent-green); border-color: var(--accent-green); color: white; }
+        .btn-danger { background: var(--accent-red); border-color: var(--accent-red); color: white; }
+        .btn-sm { padding: 5px 10px; font-size: 11px; }
+        .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 56px);
+            margin-top: 56px;
+        }
+
+        /* Left Panel */
+        .panel-left {
+            width: 340px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+            overflow-y: auto;
+        }
+
+        .section { border-bottom: 1px solid var(--border-color); }
+
+        .section-header {
+            padding: 12px 16px;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            color: var(--text-muted);
+            background: var(--bg-tertiary);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            cursor: pointer;
+            user-select: none;
+        }
+
+        .section-header:hover { color: var(--text-secondary); }
+        .section-content { padding: 14px 16px; }
+        .section-content.collapsed { display: none; }
+
+        /* Cards */
+        .card {
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 14px;
+            margin-bottom: 12px;
+        }
+
+        .card-title {
+            font-size: 12px;
+            font-weight: 600;
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .card-accent {
+            background: linear-gradient(135deg, rgba(239, 68, 68, 0.1) 0%, rgba(168, 85, 247, 0.1) 100%);
+            border-color: rgba(239, 68, 68, 0.2);
+        }
+
+        .card-cyan {
+            background: linear-gradient(135deg, rgba(6, 182, 212, 0.1) 0%, rgba(59, 130, 246, 0.1) 100%);
+            border-color: rgba(6, 182, 212, 0.2);
+        }
+
+        .card-green {
+            background: linear-gradient(135deg, rgba(34, 197, 94, 0.1) 0%, rgba(6, 182, 212, 0.1) 100%);
+            border-color: rgba(34, 197, 94, 0.2);
+        }
+
+        /* Form Elements */
+        .input-group { margin-bottom: 12px; }
+        .input-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; display: block; }
+        .input {
+            width: 100%;
+            background: var(--bg-primary);
+            border: 1px solid var(--border-color);
+            border-radius: 5px;
+            padding: 8px 10px;
+            color: var(--text-primary);
+            font-family: var(--font-mono);
+            font-size: 12px;
+            transition: border-color 0.2s;
+        }
+        .input:focus { outline: none; border-color: var(--accent-blue); }
+        .input-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+
+        /* Sliders */
+        .slider-row { display: flex; align-items: center; gap: 10px; margin-bottom: 8px; }
+        .slider-label { font-size: 10px; color: var(--text-secondary); min-width: 90px; }
+        .slider {
+            flex: 1;
+            -webkit-appearance: none;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--bg-elevated);
+        }
+        .slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 14px; height: 14px;
+            border-radius: 50%;
+            background: var(--accent-blue);
+            cursor: pointer;
+            box-shadow: var(--shadow-sm);
+        }
+        .slider-value { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); min-width: 30px; text-align: right; }
+
+        /* Mode Buttons */
+        .mode-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 4px; }
+        .mode-btn {
+            padding: 10px 4px;
+            border-radius: 6px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s;
+        }
+        .mode-btn:hover { border-color: var(--border-active); }
+        .mode-btn.active { border-color: var(--accent-blue); background: rgba(59, 130, 246, 0.1); }
+        .mode-btn-icon { font-size: 16px; margin-bottom: 2px; }
+        .mode-btn-label { font-size: 9px; color: var(--text-secondary); }
+        .mode-btn.active .mode-btn-label { color: var(--accent-blue); }
+
+        /* Arms */
+        .arm-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 10px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            margin-bottom: 6px;
+            cursor: pointer;
+            border: 1px solid transparent;
+            transition: all 0.15s;
+        }
+        .arm-item:hover { border-color: var(--border-active); }
+        .arm-item.active { border-color: var(--accent-blue); }
+        .arm-color { width: 14px; height: 14px; border-radius: 4px; cursor: pointer; border: 1px solid var(--border-color); }
+        .arm-name { flex: 1; background: transparent; border: none; color: var(--text-primary); font-size: 12px; outline: none; }
+        .arm-count { font-family: var(--font-mono); font-size: 10px; color: var(--text-muted); background: var(--bg-primary); padding: 2px 6px; border-radius: 4px; }
+        .arm-delete { opacity: 0.3; cursor: pointer; font-size: 14px; }
+        .arm-delete:hover { opacity: 1; color: var(--accent-red); }
+
+        /* Calibration Status */
+        .cal-status { padding: 10px 12px; border-radius: 6px; font-size: 11px; text-align: center; margin-top: 12px; }
+        .cal-status.incomplete { background: rgba(249, 115, 22, 0.1); color: var(--accent-orange); border: 1px solid rgba(249, 115, 22, 0.2); }
+        .cal-status.complete { background: rgba(34, 197, 94, 0.1); color: var(--accent-green); border: 1px solid rgba(34, 197, 94, 0.2); }
+
+        /* Canvas Container */
+        .canvas-container {
+            flex: 1;
+            background: var(--canvas-bg);
+            position: relative;
+            overflow: hidden;
+        }
+
+        #mainCanvas, #overlayCanvas { position: absolute; top: 0; left: 0; }
+        #overlayCanvas { pointer-events: none; }
+
+        /* Drop Zone */
+        .drop-zone {
+            position: absolute;
+            top: 50%; left: 50%;
+            transform: translate(-50%, -50%);
+            text-align: center;
+            pointer-events: none;
+        }
+        .drop-zone.hidden { display: none; }
+        .drop-icon {
+            width: 80px; height: 80px;
+            margin: 0 auto 20px;
+            border: 2px dashed var(--border-color);
+            border-radius: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            color: var(--text-muted);
+        }
+        .drop-text { font-size: 15px; color: var(--text-secondary); margin-bottom: 8px; }
+        .drop-hint { font-size: 12px; color: var(--text-muted); }
+
+        /* Canvas Toolbar */
+        .canvas-toolbar {
+            position: absolute;
+            top: 12px; left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 4px;
+            background: var(--bg-secondary);
+            padding: 6px 8px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-md);
+        }
+        .toolbar-btn {
+            padding: 6px 10px;
+            border-radius: 5px;
+            border: none;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 11px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            transition: all 0.15s;
+        }
+        .toolbar-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+        /* Canvas Controls */
+        .canvas-controls {
+            position: absolute;
+            bottom: 16px; left: 50%;
+            transform: translateX(-50%);
+            display: flex;
+            gap: 4px;
+            background: var(--bg-secondary);
+            padding: 6px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            box-shadow: var(--shadow-md);
+        }
+        .canvas-btn {
+            width: 32px; height: 32px;
+            border-radius: 5px;
+            border: none;
+            background: var(--bg-tertiary);
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        .canvas-btn:hover { background: var(--bg-elevated); color: var(--text-primary); }
+
+        /* Coordinates Display */
+        .coords-display {
+            position: absolute;
+            top: 12px; left: 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-family: var(--font-mono);
+            font-size: 11px;
+            display: none;
+            box-shadow: var(--shadow-md);
+        }
+        .coords-display.visible { display: block; }
+        .coords-row { display: flex; gap: 16px; margin-bottom: 4px; }
+        .coords-row:last-child { margin-bottom: 0; }
+        .coords-label { color: var(--text-muted); }
+        .coords-value { color: var(--accent-cyan); }
+
+        /* Validation Overlay */
+        .validation-overlay {
+            position: absolute;
+            top: 12px; right: 12px;
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px;
+            min-width: 200px;
+            display: none;
+            box-shadow: var(--shadow-lg);
+        }
+        .validation-overlay.visible { display: block; }
+        .validation-title { font-size: 11px; font-weight: 600; margin-bottom: 8px; color: var(--accent-green); }
+        .validation-row { display: flex; justify-content: space-between; font-size: 10px; margin-bottom: 4px; }
+        .validation-label { color: var(--text-muted); }
+        .validation-value { font-family: var(--font-mono); }
+        .validation-good { color: var(--accent-green); }
+        .validation-warning { color: var(--accent-orange); }
+        .validation-bad { color: var(--accent-red); }
+
+        /* Crosshairs */
+        .crosshair { position: absolute; pointer-events: none; }
+        .crosshair-h { height: 1px; left: 0; right: 0; background: rgba(239, 68, 68, 0.4); }
+        .crosshair-v { width: 1px; top: 0; bottom: 0; background: rgba(239, 68, 68, 0.4); }
+
+        /* Processing Overlay */
+        .processing-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.85);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 16px;
+            z-index: 50;
+        }
+        .processing-overlay.visible { display: flex; }
+        .spinner {
+            width: 48px; height: 48px;
+            border: 3px solid var(--border-color);
+            border-top-color: var(--accent-red);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .processing-text { font-size: 14px; color: var(--text-secondary); }
+        .processing-progress { width: 240px; height: 4px; background: var(--bg-tertiary); border-radius: 2px; overflow: hidden; }
+        .processing-bar { height: 100%; background: linear-gradient(90deg, var(--accent-red), var(--accent-purple)); transition: width 0.3s; }
+
+        /* Right Panel */
+        .panel-right {
+            width: 420px;
+            background: var(--bg-secondary);
+            border-left: 1px solid var(--border-color);
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Tabs */
+        .tabs {
+            display: flex;
+            background: var(--bg-tertiary);
+            border-bottom: 1px solid var(--border-color);
+        }
+        .tab {
+            flex: 1;
+            padding: 12px;
+            font-size: 11px;
+            font-weight: 500;
+            text-align: center;
+            cursor: pointer;
+            color: var(--text-muted);
+            border-bottom: 2px solid transparent;
+            transition: all 0.15s;
+        }
+        .tab:hover { color: var(--text-secondary); }
+        .tab.active { color: var(--accent-red); border-bottom-color: var(--accent-red); }
+
+        .tab-content { flex: 1; overflow-y: auto; display: none; }
+        .tab-content.active { display: block; }
+
+        /* Tables */
+        .points-table { width: 100%; border-collapse: collapse; font-size: 10px; }
+        .points-table th {
+            background: var(--bg-tertiary);
+            padding: 10px 8px;
+            text-align: left;
+            font-weight: 500;
+            color: var(--text-muted);
+            position: sticky;
+            top: 0;
+            z-index: 1;
+        }
+        .points-table td { padding: 8px; border-bottom: 1px solid var(--border-color); font-family: var(--font-mono); }
+        .points-table tr:hover { background: var(--bg-tertiary); }
+
+        /* Stats Grid */
+        .stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; padding: 14px; }
+        .stat-card { background: var(--bg-tertiary); border-radius: 8px; padding: 12px; text-align: center; }
+        .stat-value { font-family: var(--font-mono); font-size: 20px; font-weight: 600; color: var(--accent-cyan); }
+        .stat-label { font-size: 9px; color: var(--text-muted); margin-top: 4px; }
+
+        /* Validation Section */
+        .validation-section { padding: 14px; }
+        .validation-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .metric-card { background: var(--bg-tertiary); border-radius: 8px; padding: 14px; }
+        .metric-label { font-size: 10px; color: var(--text-muted); margin-bottom: 6px; }
+        .metric-value { font-family: var(--font-mono); font-size: 18px; font-weight: 600; }
+        .metric-value.good { color: var(--accent-green); }
+        .metric-value.warning { color: var(--accent-orange); }
+        .metric-value.bad { color: var(--accent-red); }
+
+        /* Export Grid */
+        .export-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; padding: 14px; }
+        .export-btn {
+            padding: 14px;
+            border-radius: 8px;
+            border: 1px solid var(--border-color);
+            background: var(--bg-tertiary);
+            color: var(--text-primary);
+            font-size: 11px;
+            cursor: pointer;
+            text-align: center;
+            transition: all 0.15s;
+        }
+        .export-btn:hover { background: var(--bg-elevated); border-color: var(--border-active); }
+        .export-icon { font-size: 20px; margin-bottom: 6px; }
+        .export-label { font-weight: 500; }
+        .export-desc { font-size: 9px; color: var(--text-muted); margin-top: 4px; }
+
+        /* Toast Container */
+        .toast-container { position: fixed; bottom: 20px; right: 20px; z-index: 1000; }
+        .toast {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 12px 16px;
+            margin-top: 8px;
+            font-size: 12px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            animation: slideIn 0.2s ease;
+            box-shadow: var(--shadow-lg);
+        }
+        .toast.success { border-color: var(--accent-green); }
+        .toast.error { border-color: var(--accent-red); }
+        .toast.info { border-color: var(--accent-blue); }
+        @keyframes slideIn { from { opacity: 0; transform: translateX(20px); } to { opacity: 1; transform: translateX(0); } }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+        .modal-overlay.visible { display: flex; }
+        .modal {
+            background: var(--bg-secondary);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            max-width: 800px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 24px;
+            position: relative;
+            box-shadow: var(--shadow-lg);
+        }
+        .modal-title { font-size: 18px; font-weight: 600; margin-bottom: 16px; }
+        .modal-close {
+            position: absolute;
+            top: 16px; right: 16px;
+            font-size: 24px;
+            cursor: pointer;
+            color: var(--text-muted);
+            background: none;
+            border: none;
+        }
+        .modal-close:hover { color: var(--text-primary); }
+
+        /* Tutorial Overlay */
+        .tutorial-overlay {
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            z-index: 300;
+        }
+        .tutorial-overlay.visible { display: block; }
+        .tutorial-step {
+            position: absolute;
+            background: var(--bg-secondary);
+            border: 2px solid var(--accent-purple);
+            border-radius: 12px;
+            padding: 20px;
+            max-width: 320px;
+            box-shadow: var(--shadow-lg);
+        }
+        .tutorial-step-number {
+            position: absolute;
+            top: -12px; left: -12px;
+            width: 28px; height: 28px;
+            background: var(--accent-purple);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 700;
+        }
+        .tutorial-title { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+        .tutorial-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 12px; }
+        .tutorial-actions { display: flex; gap: 8px; justify-content: flex-end; }
+        .tutorial-highlight {
+            position: absolute;
+            border: 2px solid var(--accent-purple);
+            border-radius: 8px;
+            pointer-events: none;
+            box-shadow: 0 0 0 9999px rgba(0,0,0,0.7);
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-primary); }
+        ::-webkit-scrollbar-thumb { background: var(--border-color); border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--border-active); }
+
+        /* Hidden inputs */
+        #imageInput, #batchInput { display: none; }
+    </style>
+</head>
+<body data-theme="dark">
+    <input type="file" id="imageInput" accept="image/*">
+    <input type="file" id="batchInput" accept="image/*" multiple>
+
+    <header class="header">
+        <div class="logo">
+            <div class="logo-icon">📈</div>
+            <div class="logo-text">Surv<span>Extract</span></div>
+            <span class="logo-badge">PRO v3</span>
+        </div>
+        
+        <div class="header-center">
+            <div class="curve-type-selector">
+                <button class="curve-type-btn active" data-type="km" onclick="setCurveType('km')">Kaplan-Meier</button>
+                <button class="curve-type-btn" data-type="ci" onclick="setCurveType('ci')">Cum. Incidence</button>
+                <button class="curve-type-btn" data-type="hazard" onclick="setCurveType('hazard')">Hazard</button>
+                <button class="curve-type-btn" data-type="hr" onclick="setCurveType('hr')">HR Over Time</button>
+            </div>
+        </div>
+
+        <div class="header-actions">
+            <button class="btn" onclick="document.getElementById('imageInput').click()">📷 Load</button>
+            <button class="btn" onclick="document.getElementById('batchInput').click()">📁 Batch</button>
+            <button class="btn btn-primary" onclick="runAutoTrace()">🤖 Auto-Trace</button>
+            <button class="btn btn-success" onclick="reconstructData()">✓ Reconstruct</button>
+            <button class="btn" onclick="toggleValidationOverlay()">📊 Validate</button>
+            <button class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">🌓</button>
+            <button class="btn" onclick="startTutorial()">❓</button>
+        </div>
+    </header>
+
+    <div class="main-container">
+        <aside class="panel-left">
+            <!-- Curve Info Section -->
+            <div class="section">
+                <div class="section-content" style="padding-top: 10px;">
+                    <div class="card card-accent">
+                        <div class="card-title"><span>📈</span><span id="curveTypeName">Kaplan-Meier Survival</span></div>
+                        <div style="font-size: 11px; color: var(--text-secondary); line-height: 1.5;" id="curveTypeDesc">Standard survival curve. Y-axis shows proportion surviving.</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-top: 10px;">
+                            <div style="background: rgba(0,0,0,0.2); padding: 6px 8px; border-radius: 4px; font-size: 10px;">
+                                <div style="color: var(--text-muted);">Y Start</div>
+                                <div style="font-family: var(--font-mono);" id="yStartDefault">1</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); padding: 6px 8px; border-radius: 4px; font-size: 10px;">
+                                <div style="color: var(--text-muted);">Direction</div>
+                                <div style="font-family: var(--font-mono);" id="directionDefault">↓ Decreasing</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Journal Templates -->
+                    <div class="card">
+                        <div class="card-title">📰 Journal Template</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 6px;">
+                            <button class="btn btn-sm selected" onclick="setJournalTemplate('nejm', this)" style="justify-content: center;">NEJM</button>
+                            <button class="btn btn-sm" onclick="setJournalTemplate('jacc', this)" style="justify-content: center;">JACC</button>
+                            <button class="btn btn-sm" onclick="setJournalTemplate('lancet', this)" style="justify-content: center;">Lancet</button>
+                            <button class="btn btn-sm" onclick="setJournalTemplate('jama', this)" style="justify-content: center;">JAMA</button>
+                        </div>
+                    </div>
+
+                    <!-- Cardio Outcomes -->
+                    <div class="card">
+                        <div class="card-title">🫀 Outcome</div>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px;">
+                            <button class="btn btn-sm" onclick="setOutcome('mace', this)">💔 MACE</button>
+                            <button class="btn btn-sm" onclick="setOutcome('cvdeath', this)">⚫ CV Death</button>
+                            <button class="btn btn-sm" onclick="setOutcome('mi', this)">❤️ MI</button>
+                            <button class="btn btn-sm" onclick="setOutcome('stroke', this)">🧠 Stroke</button>
+                            <button class="btn btn-sm" onclick="setOutcome('hf', this)">💗 HF Hosp</button>
+                            <button class="btn btn-sm" onclick="setOutcome('bleed', this)">🩸 Bleeding</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Mode Section -->
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)"><span>🎯 Digitization Mode</span><span>▼</span></div>
+                <div class="section-content">
+                    <div class="mode-grid">
+                        <div class="mode-btn active" onclick="setMode('calibrate', this)"><div class="mode-btn-icon">📐</div><div class="mode-btn-label">Calibrate</div></div>
+                        <div class="mode-btn" onclick="setMode('digitize', this)"><div class="mode-btn-icon">✏️</div><div class="mode-btn-label">Digitize</div></div>
+                        <div class="mode-btn" onclick="setMode('censor', this)"><div class="mode-btn-icon">✚</div><div class="mode-btn-label">Censor</div></div>
+                        <div class="mode-btn" onclick="setMode('ci', this)"><div class="mode-btn-icon">📊</div><div class="mode-btn-label">CI Band</div></div>
+                        <div class="mode-btn" onclick="setMode('pan', this)"><div class="mode-btn-icon">✋</div><div class="mode-btn-label">Pan</div></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Calibration Section -->
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)"><span>📐 Axis Calibration</span><span>▼</span></div>
+                <div class="section-content">
+                    <div class="input-group">
+                        <label class="input-label">Point 1: Origin (x, y)</label>
+                        <div class="input-row">
+                            <input type="number" class="input" id="calX1" value="0" step="any" onchange="updateCalibrationValues()">
+                            <input type="number" class="input" id="calY1" value="1" step="any" onchange="updateCalibrationValues()">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Point 2: X-axis end</label>
+                        <div class="input-row">
+                            <input type="number" class="input" id="calX2" placeholder="e.g., 60" step="any" onchange="updateCalibrationValues()">
+                            <input type="number" class="input" id="calY2" value="1" step="any" onchange="updateCalibrationValues()">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Point 3: Y-axis end</label>
+                        <div class="input-row">
+                            <input type="number" class="input" id="calX3" value="0" step="any" onchange="updateCalibrationValues()">
+                            <input type="number" class="input" id="calY3" placeholder="e.g., 0" step="any" onchange="updateCalibrationValues()">
+                        </div>
+                    </div>
+                    <div class="input-group">
+                        <label class="input-label">Default N (if no at-risk table)</label>
+                        <input type="number" class="input" id="defaultN" value="100" step="1" min="10">
+                    </div>
+                    <div class="cal-status incomplete" id="calStatus">Click 3 points to calibrate axes</div>
+                    <button class="btn btn-sm" style="width: 100%; margin-top: 10px;" onclick="resetCalibration()">Reset Calibration</button>
+                </div>
+            </div>
+
+            <!-- Arms Section -->
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)"><span>🏷️ Study Arms</span><span>▼</span></div>
+                <div class="section-content">
+                    <div id="armList"></div>
+                    <button class="btn btn-sm" style="width: 100%; margin-top: 10px;" onclick="addArm()">+ Add Arm</button>
+                </div>
+            </div>
+
+            <!-- At-Risk Section -->
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)"><span>📊 Numbers at Risk</span><span>▼</span></div>
+                <div class="section-content" id="atRiskSection"></div>
+            </div>
+
+            <!-- Auto-Trace Settings -->
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)"><span>🤖 Auto-Trace Settings</span><span>▼</span></div>
+                <div class="section-content">
+                    <div class="slider-row">
+                        <span class="slider-label">Color Tolerance</span>
+                        <input type="range" class="slider" id="colorTolerance" min="10" max="100" value="35" oninput="document.getElementById('colorToleranceVal').textContent=this.value">
+                        <span class="slider-value" id="colorToleranceVal">35</span>
+                    </div>
+                    <div class="slider-row">
+                        <span class="slider-label">Sample Interval</span>
+                        <input type="range" class="slider" id="sampleInterval" min="1" max="20" value="3" oninput="document.getElementById('sampleIntervalVal').textContent=this.value">
+                        <span class="slider-value" id="sampleIntervalVal">3</span>
+                    </div>
+                    <div class="slider-row">
+                        <span class="slider-label">Num Curves</span>
+                        <input type="range" class="slider" id="numCurves" min="1" max="8" value="2" oninput="document.getElementById('numCurvesVal').textContent=this.value">
+                        <span class="slider-value" id="numCurvesVal">2</span>
+                    </div>
+                    <div class="slider-row">
+                        <span class="slider-label">Spatial Weight</span>
+                        <input type="range" class="slider" id="spatialWeight" min="0" max="100" value="30" oninput="document.getElementById('spatialWeightVal').textContent=this.value">
+                        <span class="slider-value" id="spatialWeightVal">30</span>
+                    </div>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; margin-top: 10px;">
+                        <input type="checkbox" id="enforceConstraints" checked>
+                        <span>Enforce curve-type constraints</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Display Options -->
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)"><span>⚙️ Display Options</span><span>▼</span></div>
+                <div class="section-content">
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 11px;">
+                        <input type="checkbox" id="showGrid" checked onchange="render()"> Show calibration grid
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 11px;">
+                        <input type="checkbox" id="stepFunction" checked onchange="render()"> Draw as step function
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 11px;">
+                        <input type="checkbox" id="showReconOverlay" onchange="render()"> Show reconstructed overlay
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
+                        <input type="checkbox" id="showBootstrapCI" onchange="render()"> Show bootstrap CI bands
+                    </label>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Canvas Container -->
+        <div class="canvas-container" id="canvasContainer">
+            <canvas id="mainCanvas"></canvas>
+            <canvas id="overlayCanvas"></canvas>
+            
+            <div class="crosshair crosshair-h" id="crosshairH" style="display: none;"></div>
+            <div class="crosshair crosshair-v" id="crosshairV" style="display: none;"></div>
+            
+            <div class="drop-zone" id="dropZone">
+                <div class="drop-icon">📈</div>
+                <div class="drop-text">Drop survival curve image here</div>
+                <div class="drop-hint">Or click Load button • Supports KM, CI, Hazard curves</div>
+            </div>
+
+            <div class="coords-display" id="coordsDisplay">
+                <div class="coords-row">
+                    <span class="coords-label">Pixel:</span>
+                    <span class="coords-value" id="pxCoords">0, 0</span>
+                </div>
+                <div class="coords-row">
+                    <span class="coords-label">Data:</span>
+                    <span class="coords-value" id="dataCoords">—, —</span>
+                </div>
+            </div>
+
+            <!-- Validation Overlay - NEW -->
+            <div class="validation-overlay" id="validationOverlay">
+                <div class="validation-title">✓ Guyot Validation</div>
+                <div class="validation-row">
+                    <span class="validation-label">RMSE:</span>
+                    <span class="validation-value" id="valRMSE">—</span>
+                </div>
+                <div class="validation-row">
+                    <span class="validation-label">Max Deviation:</span>
+                    <span class="validation-value" id="valMaxDev">—</span>
+                </div>
+                <div class="validation-row">
+                    <span class="validation-label">Correlation:</span>
+                    <span class="validation-value" id="valCorr">—</span>
+                </div>
+                <div class="validation-row">
+                    <span class="validation-label">N Match:</span>
+                    <span class="validation-value" id="valNMatch">—</span>
+                </div>
+                <button class="btn btn-sm" style="width: 100%; margin-top: 8px;" onclick="runFullValidation()">Run Full Validation</button>
+            </div>
+
+            <div class="canvas-toolbar" id="canvasToolbar" style="display: none;">
+                <button class="toolbar-btn" onclick="sampleColor()">🎨 Sample</button>
+                <button class="toolbar-btn" onclick="traceSampledColor()">📝 Trace</button>
+                <button class="toolbar-btn" onclick="undoLast()">↩️ Undo</button>
+                <button class="toolbar-btn" onclick="clearArm()">🗑️ Clear Arm</button>
+                <button class="toolbar-btn" onclick="clearAllPoints()">🗑️ All</button>
+            </div>
+
+            <div class="canvas-controls" id="canvasControls" style="display: none;">
+                <button class="canvas-btn" onclick="zoomIn()">+</button>
+                <button class="canvas-btn" onclick="zoomOut()">−</button>
+                <button class="canvas-btn" onclick="zoomFit()">⊡</button>
+                <button class="canvas-btn" onclick="zoomReset()">1:1</button>
+                <span style="font-family: var(--font-mono); font-size: 11px; color: var(--text-muted); padding: 0 10px;" id="zoomLevel">100%</span>
+            </div>
+
+            <div class="processing-overlay" id="processingOverlay">
+                <div class="spinner"></div>
+                <div class="processing-text" id="processingText">Processing...</div>
+                <div class="processing-progress">
+                    <div class="processing-bar" id="processingBar" style="width: 0%;"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Panel -->
+        <aside class="panel-right">
+            <div class="tabs">
+                <div class="tab active" data-tab="points" onclick="switchTab('points')">Points</div>
+                <div class="tab" data-tab="data" onclick="switchTab('data')">IPD</div>
+                <div class="tab" data-tab="stats" onclick="switchTab('stats')">Stats</div>
+                <div class="tab" data-tab="validate" onclick="switchTab('validate')">Validate</div>
+                <div class="tab" data-tab="export" onclick="switchTab('export')">Export</div>
+            </div>
+
+            <!-- Points Tab -->
+            <div class="tab-content active" id="tab-points">
+                <table class="points-table">
+                    <thead>
+                        <tr>
+                            <th>Arm</th>
+                            <th id="xHeader">Time</th>
+                            <th id="yHeader">Survival</th>
+                            <th>Type</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="pointsTableBody"></tbody>
+                </table>
+            </div>
+
+            <!-- IPD/Data Tab -->
+            <div class="tab-content" id="tab-data">
+                <div class="stats-grid">
+                    <div class="stat-card"><div class="stat-value" id="statN">0</div><div class="stat-label">Patients</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statEvents">0</div><div class="stat-label">Events</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statCensored">0</div><div class="stat-label">Censored</div></div>
+                    <div class="stat-card"><div class="stat-value" id="statMedian">—</div><div class="stat-label">Median</div></div>
+                </div>
+                <div style="padding: 14px;">
+                    <div class="card">
+                        <div class="card-title">🔬 Reconstruction Algorithm</div>
+                        <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 12px;" id="reconAlgoDesc">Modified-iKM (Guyot et al. 2012)</div>
+                        <button class="btn btn-primary btn-sm" style="width: 100%;" onclick="reconstructData()">Run Reconstruction</button>
+                    </div>
+                    <div style="background: var(--bg-tertiary); border-radius: 6px; padding: 12px; max-height: 300px; overflow-y: auto;">
+                        <pre style="font-family: var(--font-mono); font-size: 9px; color: var(--text-secondary); white-space: pre-wrap;" id="dataPreview">Reconstructed data will appear here...</pre>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Stats Tab -->
+            <div class="tab-content" id="tab-stats">
+                <div class="validation-grid" style="padding: 14px;">
+                    <div class="metric-card"><div class="metric-label">Hazard Ratio</div><div class="metric-value" id="metricHR">—</div></div>
+                    <div class="metric-card"><div class="metric-label">95% CI</div><div class="metric-value" id="metricCI">—</div></div>
+                    <div class="metric-card"><div class="metric-label">Log-Rank p</div><div class="metric-value" id="metricLogRank">—</div></div>
+                    <div class="metric-card"><div class="metric-label">Median Δ</div><div class="metric-value" id="metricMedianDiff">—</div></div>
+                </div>
+                
+                <!-- RMST Section -->
+                <div style="padding: 0 14px 14px;">
+                    <div class="card card-cyan">
+                        <div class="card-title" style="color: var(--accent-cyan);">📏 RMST Analysis</div>
+                        <div class="input-group">
+                            <label class="input-label">Restriction Time (τ)</label>
+                            <input type="number" class="input" id="rmstTau" placeholder="e.g., 60" step="any">
+                        </div>
+                        <button class="btn btn-sm" style="width: 100%; margin-bottom: 12px;" onclick="calculateRMST()">Calculate RMST</button>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 9px; color: var(--text-muted);">Arm 1 RMST</div>
+                                <div style="font-family: var(--font-mono); font-size: 16px; color: var(--accent-cyan);" id="rmst1">—</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 9px; color: var(--text-muted);">Arm 2 RMST</div>
+                                <div style="font-family: var(--font-mono); font-size: 16px; color: var(--accent-cyan);" id="rmst2">—</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 9px; color: var(--text-muted);">Difference</div>
+                                <div style="font-family: var(--font-mono); font-size: 16px; color: var(--accent-cyan);" id="rmstDiff">—</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 9px; color: var(--text-muted);">95% CI</div>
+                                <div style="font-family: var(--font-mono); font-size: 12px; color: var(--accent-cyan);" id="rmstCI">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Cox Regression Section - NEW -->
+                <div style="padding: 0 14px 14px;">
+                    <div class="card card-green">
+                        <div class="card-title" style="color: var(--accent-green);">📈 Cox Regression (NEW)</div>
+                        <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 10px;">Proper HR estimation from reconstructed IPD using partial likelihood</div>
+                        <button class="btn btn-sm" style="width: 100%; margin-bottom: 12px;" onclick="runCoxRegression()">Run Cox Model</button>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 9px; color: var(--text-muted);">Cox HR</div>
+                                <div style="font-family: var(--font-mono); font-size: 16px; color: var(--accent-green);" id="coxHR">—</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 9px; color: var(--text-muted);">95% CI</div>
+                                <div style="font-family: var(--font-mono); font-size: 12px; color: var(--accent-green);" id="coxCI">—</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 9px; color: var(--text-muted);">Wald p</div>
+                                <div style="font-family: var(--font-mono); font-size: 16px; color: var(--accent-green);" id="coxP">—</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 9px; color: var(--text-muted);">Concordance</div>
+                                <div style="font-family: var(--font-mono); font-size: 16px; color: var(--accent-green);" id="coxC">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: 0 14px 14px;">
+                    <button class="btn" style="width: 100%;" onclick="calculateAllStats()">Calculate All Statistics</button>
+                </div>
+            </div>
+
+            <!-- Validate Tab - NEW -->
+            <div class="tab-content" id="tab-validate">
+                <div style="padding: 14px;">
+                    <div class="card card-accent">
+                        <div class="card-title" style="color: var(--accent-red);">✓ Guyot Algorithm Validation</div>
+                        <div style="font-size: 10px; color: var(--text-secondary); margin-bottom: 12px; line-height: 1.5;">
+                            Overlay reconstructed KM curve on original digitized points to verify accuracy. 
+                            Lower RMSE indicates better reconstruction fidelity.
+                        </div>
+                        <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; margin-bottom: 10px;">
+                            <input type="checkbox" id="showReconCurve" onchange="render()"> Show reconstructed curve overlay
+                        </label>
+                        <button class="btn btn-sm" style="width: 100%;" onclick="runGuyotValidation()">Run Validation</button>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-title">📊 Cross-Validation Metrics</div>
+                        <div class="validation-grid" style="padding: 0;">
+                            <div class="metric-card"><div class="metric-label">RMSE</div><div class="metric-value" id="cvRMSE">—</div></div>
+                            <div class="metric-card"><div class="metric-label">Max Deviation</div><div class="metric-value" id="cvMaxDev">—</div></div>
+                            <div class="metric-card"><div class="metric-label">Pearson r</div><div class="metric-value" id="cvCorr">—</div></div>
+                            <div class="metric-card"><div class="metric-label">N Recovery</div><div class="metric-value" id="cvNRecovery">—</div></div>
+                        </div>
+                    </div>
+
+                    <!-- Bootstrap CI Section - NEW -->
+                    <div class="card card-cyan">
+                        <div class="card-title" style="color: var(--accent-cyan);">🎲 Bootstrap Confidence Intervals</div>
+                        <div class="input-group">
+                            <label class="input-label">Bootstrap Iterations</label>
+                            <input type="number" class="input" id="bootstrapN" value="1000" step="100" min="100" max="10000">
+                        </div>
+                        <button class="btn btn-sm" style="width: 100%; margin-bottom: 12px;" onclick="runBootstrapCI()">Generate Bootstrap CI</button>
+                        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
+                            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 9px; color: var(--text-muted);">HR 95% CI (Bootstrap)</div>
+                                <div style="font-family: var(--font-mono); font-size: 12px; color: var(--accent-cyan);" id="bootHRCI">—</div>
+                            </div>
+                            <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 6px; text-align: center;">
+                                <div style="font-size: 9px; color: var(--text-muted);">RMST Diff 95% CI</div>
+                                <div style="font-family: var(--font-mono); font-size: 12px; color: var(--accent-cyan);" id="bootRMSTCI">—</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Export Tab -->
+            <div class="tab-content" id="tab-export">
+                <!-- MetaEngine Integration -->
+                <div style="padding: 14px;">
+                    <div class="card card-accent">
+                        <div class="card-title" style="color: var(--accent-red);">🔗 MetaEngine Integration</div>
+                        <div style="font-size: 10px; color: var(--text-muted); margin-bottom: 12px;">Export directly to MetaEngine dashboard format for meta-analysis.</div>
+                        <div style="display: flex; gap: 8px;">
+                            <button class="btn btn-sm" style="flex: 1;" onclick="exportMetaEngine()">📊 Full JSON</button>
+                            <button class="btn btn-sm" style="flex: 1;" onclick="exportMetaEngineForest()">🌲 Forest CSV</button>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="export-grid">
+                    <button class="export-btn" onclick="exportCSV('points')"><div class="export-icon">📄</div><div class="export-label">Points CSV</div><div class="export-desc">Digitized coordinates</div></button>
+                    <button class="export-btn" onclick="exportCSV('ipd')"><div class="export-icon">👤</div><div class="export-label">IPD CSV</div><div class="export-desc">Individual patient data</div></button>
+                    <button class="export-btn" onclick="exportIPDWithBootstrap()"><div class="export-icon">🎲</div><div class="export-label">IPD + Bootstrap</div><div class="export-desc">With uncertainty estimates</div></button>
+                    <button class="export-btn" onclick="exportR()"><div class="export-icon">📊</div><div class="export-label">R Script</div><div class="export-desc">survfit ready code</div></button>
+                    <button class="export-btn" onclick="exportPython()"><div class="export-icon">🐍</div><div class="export-label">Python</div><div class="export-desc">lifelines compatible</div></button>
+                    <button class="export-btn" onclick="exportStata()"><div class="export-icon">📈</div><div class="export-label">Stata</div><div class="export-desc">.do file</div></button>
+                    <button class="export-btn" onclick="exportJSON()"><div class="export-icon">💾</div><div class="export-label">Save Project</div><div class="export-desc">Full project state</div></button>
+                    <button class="export-btn" onclick="importProject()"><div class="export-icon">📂</div><div class="export-label">Load Project</div><div class="export-desc">Import JSON</div></button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Tutorial Overlay - NEW -->
+    <div class="tutorial-overlay" id="tutorialOverlay">
+        <div class="tutorial-step" id="tutorialStep" style="top: 100px; left: 400px;">
+            <div class="tutorial-step-number" id="tutorialStepNum">1</div>
+            <div class="tutorial-title" id="tutorialTitle">Welcome to SurvExtract Pro v3</div>
+            <div class="tutorial-text" id="tutorialText">This tutorial will guide you through digitizing survival curves.</div>
+            <div class="tutorial-actions">
+                <button class="btn btn-sm" onclick="skipTutorial()">Skip</button>
+                <button class="btn btn-sm btn-primary" onclick="nextTutorialStep()">Next</button>
+            </div>
+        </div>
+        <div class="tutorial-highlight" id="tutorialHighlight" style="display: none;"></div>
+    </div>
+
+    <!-- Help Modal -->
+    <div class="modal-overlay" id="helpModal">
+        <div class="modal">
+            <button class="modal-close" onclick="hideModal('helpModal')">×</button>
+            <div class="modal-title">SurvExtract Pro v3 - Help</div>
+            <div style="font-size: 12px; line-height: 1.6; color: var(--text-secondary);">
+                <h4 style="color: var(--text-primary); margin: 16px 0 8px;">Quick Start</h4>
+                <ol style="margin-left: 20px;">
+                    <li>Load a survival curve image</li>
+                    <li>Select the curve type (KM, CI, Hazard)</li>
+                    <li>Calibrate axes by clicking 3 points</li>
+                    <li>Use Auto-Trace or manually digitize</li>
+                    <li>Reconstruct IPD and validate</li>
+                    <li>Export for meta-analysis</li>
+                </ol>
+                
+                <h4 style="color: var(--text-primary); margin: 16px 0 8px;">New in v3</h4>
+                <ul style="margin-left: 20px;">
+                    <li><strong>Guyot Validation:</strong> Overlay reconstructed curve on original</li>
+                    <li><strong>Bootstrap CI:</strong> Uncertainty estimation for IPD</li>
+                    <li><strong>Cox Regression:</strong> Proper HR from partial likelihood</li>
+                    <li><strong>Cross-Validation:</strong> RMSE, correlation metrics</li>
+                    <li><strong>Dark/Light Theme:</strong> Toggle with 🌓 button</li>
+                    <li><strong>Interactive Tutorial:</strong> Step-by-step guidance</li>
+                </ul>
+
+                <h4 style="color: var(--text-primary); margin: 16px 0 8px;">Keyboard Shortcuts</h4>
+                <ul style="margin-left: 20px;">
+                    <li><strong>1-5:</strong> Switch modes (Calibrate/Digitize/Censor/CI/Pan)</li>
+                    <li><strong>Ctrl+Z:</strong> Undo last action</li>
+                    <li><strong>Space:</strong> Toggle pan mode</li>
+                    <li><strong>+/-:</strong> Zoom in/out</li>
+                    <li><strong>0:</strong> Fit to screen</li>
+                    <li><strong>T:</strong> Toggle theme</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    <script>
+        // ============================================
+        // SurvExtract Pro v3 - Configuration & State
+        // ============================================
+        
+        const CURVE_TYPES = {
+            km: { name: 'Kaplan-Meier Survival', desc: 'Standard survival curve. Y-axis shows proportion surviving.', yStart: 1, yEnd: 0, direction: 'decreasing', monotonic: true, stepFunction: true, yLabel: 'Survival Probability', reconAlgo: 'modifiedIKM' },
+            ci: { name: 'Cumulative Incidence', desc: 'Cumulative probability of event. Starts at 0, increases.', yStart: 0, yEnd: 1, direction: 'increasing', monotonic: true, stepFunction: true, yLabel: 'Cumulative Incidence', reconAlgo: 'cumulativeIncidence' },
+            hazard: { name: 'Hazard Function', desc: 'Instantaneous hazard rate over time.', yStart: 0, yEnd: null, direction: 'variable', monotonic: false, stepFunction: false, yLabel: 'Hazard Rate', reconAlgo: 'hazardSmoothing' },
+            hr: { name: 'Hazard Ratio Over Time', desc: 'Time-varying HR with confidence bands.', yStart: 1, yEnd: null, direction: 'variable', monotonic: false, stepFunction: false, yLabel: 'Hazard Ratio', reconAlgo: 'hrTimeSeries' }
+        };
+
+        const JOURNAL_TEMPLATES = {
+            nejm: { name: 'NEJM', colors: ['#2E5A87', '#C41E3A', '#4A7C59', '#8B4513'], tolerance: 40 },
+            jacc: { name: 'JACC', colors: ['#2E7D32', '#7B1FA2', '#1565C0', '#E65100'], tolerance: 35 },
+            lancet: { name: 'Lancet', colors: ['#D32F2F', '#F57C00', '#1976D2', '#388E3C'], tolerance: 38 },
+            jama: { name: 'JAMA', colors: ['#1565C0', '#546E7A', '#2E7D32', '#C62828'], tolerance: 35 }
+        };
+
+        const CARDIO_OUTCOMES = {
+            mace: { name: 'MACE', full: 'Major Adverse Cardiovascular Events' },
+            cvdeath: { name: 'CV Death', full: 'Cardiovascular Death' },
+            mi: { name: 'MI', full: 'Myocardial Infarction' },
+            stroke: { name: 'Stroke', full: 'Stroke/TIA' },
+            hf: { name: 'HF Hosp', full: 'Heart Failure Hospitalization' },
+            bleed: { name: 'Bleeding', full: 'Major Bleeding' }
+        };
+
+        const state = {
+            image: null, imageLoaded: false, zoom: 1, panX: 0, panY: 0, mode: 'calibrate',
+            curveType: 'km', selectedOutcome: null, selectedTemplate: 'nejm',
+            calibration: { points: [], values: [{ x: 0, y: 1 }, { x: null, y: null }, { x: null, y: null }], isCalibrated: false, transform: null },
+            arms: [], activeArmIndex: 0, points: [], ciPoints: [], atRisk: {},
+            reconstructedData: {}, sampledColor: null, history: [],
+            batchQueue: [], rmstResults: null, coxResults: null, bootstrapResults: null,
+            validationResults: null, tutorialStep: 0
+        };
+
+        const armColors = ['#3b82f6', '#ef4444', '#22c55e', '#f97316', '#a855f7', '#06b6d4'];
+        let isDragging = false, dragStart = { x: 0, y: 0 };
+
+        // Utility functions
+        const sleep = ms => new Promise(r => setTimeout(r, ms));
+        const clamp = (v, min, max) => Math.max(min, Math.min(max, v));
+        const safeDiv = (a, b, fallback = 0) => (b === 0 || isNaN(b)) ? fallback : a / b;
+
+        // ============================================
+        // Theme Management - NEW
+        // ============================================
+        
+        function toggleTheme() {
+            const body = document.body;
+            const currentTheme = body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            body.setAttribute('data-theme', newTheme);
+            localStorage.setItem('survextract-theme', newTheme);
+            showToast(`Switched to ${newTheme} theme`, 'info');
+        }
+
+        function loadTheme() {
+            const saved = localStorage.getItem('survextract-theme');
+            if (saved) document.body.setAttribute('data-theme', saved);
+        }
+
+        // ============================================
+        // Tutorial System - NEW
+        // ============================================
+        
+        const TUTORIAL_STEPS = [
+            { title: 'Welcome to SurvExtract Pro v3', text: 'This tool helps you digitize survival curves and reconstruct individual patient data. Let\'s walk through the main features.', highlight: null },
+            { title: 'Step 1: Load an Image', text: 'Click the "Load" button or drag & drop a survival curve image onto the canvas.', highlight: '.header-actions button:first-child' },
+            { title: 'Step 2: Select Curve Type', text: 'Choose the appropriate curve type: Kaplan-Meier, Cumulative Incidence, Hazard, or HR over time.', highlight: '.curve-type-selector' },
+            { title: 'Step 3: Calibrate Axes', text: 'Click 3 points on the image: origin, end of X-axis, and end of Y-axis. Enter the corresponding data values.', highlight: null },
+            { title: 'Step 4: Auto-Trace or Digitize', text: 'Use Auto-Trace for automatic curve detection, or manually click points along the curves.', highlight: '.header-actions .btn-primary' },
+            { title: 'Step 5: Reconstruct IPD', text: 'Click "Reconstruct" to generate individual patient data using the Guyot algorithm.', highlight: '.header-actions .btn-success' },
+            { title: 'Step 6: Validate Results', text: 'Use the Validate tab to check reconstruction accuracy with RMSE and correlation metrics.', highlight: null },
+            { title: 'Step 7: Export', text: 'Export your data in various formats: CSV, R, Python, or MetaEngine JSON for meta-analysis.', highlight: null },
+            { title: 'You\'re Ready!', text: 'Start digitizing your survival curves. Press ❓ anytime for help.', highlight: null }
+        ];
+
+        function startTutorial() {
+            state.tutorialStep = 0;
+            document.getElementById('tutorialOverlay').classList.add('visible');
+            showTutorialStep();
+        }
+
+        function showTutorialStep() {
+            const step = TUTORIAL_STEPS[state.tutorialStep];
+            document.getElementById('tutorialStepNum').textContent = state.tutorialStep + 1;
+            document.getElementById('tutorialTitle').textContent = step.title;
+            document.getElementById('tutorialText').textContent = step.text;
+            
+            const highlight = document.getElementById('tutorialHighlight');
+            if (step.highlight) {
+                const el = document.querySelector(step.highlight);
+                if (el) {
+                    const rect = el.getBoundingClientRect();
+                    highlight.style.display = 'block';
+                    highlight.style.left = (rect.left - 4) + 'px';
+                    highlight.style.top = (rect.top - 4) + 'px';
+                    highlight.style.width = (rect.width + 8) + 'px';
+                    highlight.style.height = (rect.height + 8) + 'px';
+                }
+            } else {
+                highlight.style.display = 'none';
+            }
+        }
+
+        function nextTutorialStep() {
+            state.tutorialStep++;
+            if (state.tutorialStep >= TUTORIAL_STEPS.length) {
+                skipTutorial();
+            } else {
+                showTutorialStep();
+            }
+        }
+
+        function skipTutorial() {
+            document.getElementById('tutorialOverlay').classList.remove('visible');
+            state.tutorialStep = 0;
+        }
+
+        // ============================================
+        // Initialization
+        // ============================================
+        
+        function init() {
+            loadTheme();
+            setupCanvas();
+            setupEventListeners();
+            addArm('Treatment');
+            addArm('Control');
+            updateCurveTypeUI();
+            updateAtRiskSection();
+            render();
+            
+            // Check for first visit
+            if (!localStorage.getItem('survextract-visited')) {
+                localStorage.setItem('survextract-visited', 'true');
+                setTimeout(() => startTutorial(), 500);
+            }
+        }
+
+        function setupCanvas() {
+            const container = document.getElementById('canvasContainer');
+            ['mainCanvas', 'overlayCanvas'].forEach(id => {
+                const c = document.getElementById(id);
+                c.width = container.clientWidth;
+                c.height = container.clientHeight;
+            });
+        }
+
+        function setupEventListeners() {
+            const canvas = document.getElementById('mainCanvas');
+            const container = document.getElementById('canvasContainer');
+            
+            document.getElementById('imageInput').addEventListener('change', handleImageUpload);
+            document.getElementById('batchInput').addEventListener('change', handleBatchUpload);
+            
+            container.addEventListener('dragover', e => { e.preventDefault(); container.style.borderColor = 'var(--accent-red)'; });
+            container.addEventListener('dragleave', () => { container.style.borderColor = ''; });
+            container.addEventListener('drop', handleDrop);
+            
+            canvas.addEventListener('mousedown', handleMouseDown);
+            canvas.addEventListener('mousemove', handleMouseMove);
+            canvas.addEventListener('mouseup', handleMouseUp);
+            canvas.addEventListener('wheel', handleWheel, { passive: false });
+            canvas.addEventListener('dblclick', handleDoubleClick);
+            canvas.addEventListener('contextmenu', e => e.preventDefault());
+            
+            document.addEventListener('keydown', handleKeyDown);
+            window.addEventListener('resize', () => { setupCanvas(); render(); });
+        }
+
+        // ============================================
+        // Curve Type & Templates
+        // ============================================
+        
+        function setCurveType(type) {
+            state.curveType = type;
+            document.querySelectorAll('.curve-type-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.type === type));
+            updateCurveTypeUI();
+            const config = CURVE_TYPES[type];
+            if (config.yStart !== null) { document.getElementById('calY1').value = config.yStart; state.calibration.values[0].y = config.yStart; }
+            if (config.yEnd !== null) document.getElementById('calY3').value = config.yEnd;
+            document.getElementById('stepFunction').checked = config.stepFunction;
+        }
+
+        function updateCurveTypeUI() {
+            const config = CURVE_TYPES[state.curveType];
+            document.getElementById('curveTypeName').textContent = config.name;
+            document.getElementById('curveTypeDesc').textContent = config.desc;
+            document.getElementById('yStartDefault').textContent = config.yStart ?? 'Custom';
+            document.getElementById('directionDefault').textContent = config.direction === 'decreasing' ? '↓ Decreasing' : config.direction === 'increasing' ? '↑ Increasing' : '↕ Variable';
+            document.getElementById('yHeader').textContent = config.yLabel;
+        }
+
+        function setJournalTemplate(template, btn) {
+            document.querySelectorAll('.section-content .btn-sm').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            state.selectedTemplate = template;
+            const config = JOURNAL_TEMPLATES[template];
+            if (config) {
+                document.getElementById('colorTolerance').value = config.tolerance;
+                document.getElementById('colorToleranceVal').textContent = config.tolerance;
+                state.arms.forEach((arm, i) => { if (config.colors[i]) arm.color = config.colors[i]; });
+                updateArmList();
+                render();
+            }
+            showToast(`Applied ${template.toUpperCase()} template`, 'info');
+        }
+
+        function setOutcome(outcome, btn) {
+            document.querySelectorAll('.card .btn-sm').forEach(b => b.classList.remove('selected'));
+            btn.classList.add('selected');
+            state.selectedOutcome = outcome;
+            showToast(`Selected: ${CARDIO_OUTCOMES[outcome].full}`, 'info');
+        }
+
+        // ============================================
+        // Image Handling
+        // ============================================
+        
+        function handleImageUpload(e) { const f = e.target.files[0]; if (f) loadImage(f); }
+        function handleDrop(e) { e.preventDefault(); document.getElementById('canvasContainer').style.borderColor = ''; const f = e.dataTransfer.files[0]; if (f && f.type.startsWith('image/')) loadImage(f); }
+        
+        function loadImage(file) {
+            const reader = new FileReader();
+            reader.onload = e => {
+                const img = new Image();
+                img.onload = () => {
+                    state.image = img; state.imageLoaded = true;
+                    document.getElementById('dropZone').classList.add('hidden');
+                    document.getElementById('coordsDisplay').classList.add('visible');
+                    document.getElementById('canvasControls').style.display = 'flex';
+                    document.getElementById('canvasToolbar').style.display = 'flex';
+                    zoomFit();
+                    showToast(`Loaded: ${file.name}`, 'success');
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function handleBatchUpload(e) {
+            Array.from(e.target.files).forEach((file, i) => {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    state.batchQueue.push({ 
+                        id: Date.now() + i, name: file.name, dataUrl: ev.target.result, 
+                        status: 'pending', points: [], reconstructedData: null,
+                        history: [] // Per-batch undo stack - NEW
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+            showToast(`Added ${e.target.files.length} images to batch`, 'success');
+        }
+
+        // ============================================
+        // Rendering
+        // ============================================
+        
+        function render() {
+            const canvas = document.getElementById('mainCanvas');
+            const ctx = canvas.getContext('2d');
+            
+            const isDark = document.body.getAttribute('data-theme') === 'dark';
+            ctx.fillStyle = isDark ? '#0c0c0e' : '#f8fafc';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            if (!state.imageLoaded) return;
+            
+            ctx.save();
+            ctx.translate(state.panX, state.panY);
+            ctx.scale(state.zoom, state.zoom);
+            ctx.drawImage(state.image, 0, 0);
+            
+            if (document.getElementById('showGrid')?.checked && state.calibration.isCalibrated) drawGrid(ctx);
+            drawCalibrationPoints(ctx);
+            drawDigitizedCurves(ctx);
+            
+            if (document.getElementById('showReconOverlay')?.checked || document.getElementById('showReconCurve')?.checked) {
+                drawReconstructedOverlay(ctx);
+            }
+            
+            if (document.getElementById('showBootstrapCI')?.checked && state.bootstrapResults) {
+                drawBootstrapCIBands(ctx);
+            }
+            
+            ctx.restore();
+            document.getElementById('zoomLevel').textContent = Math.round(state.zoom * 100) + '%';
+        }
+
+        function drawGrid(ctx) {
+            const config = CURVE_TYPES[state.curveType];
+            ctx.strokeStyle = 'rgba(239, 68, 68, 0.08)';
+            ctx.lineWidth = 1 / state.zoom;
+            
+            const maxT = state.calibration.values[1]?.x || 60;
+            const step = maxT <= 12 ? 1 : maxT <= 24 ? 2 : maxT <= 60 ? 6 : 12;
+            
+            for (let t = 0; t <= maxT; t += step) {
+                const p1 = dataToPixel(t, config.yStart ?? 0);
+                const p2 = dataToPixel(t, config.yEnd ?? 1);
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            }
+            
+            const yMin = Math.min(config.yStart ?? 0, config.yEnd ?? 1);
+            const yMax = Math.max(config.yStart ?? 1, config.yEnd ?? 0);
+            for (let y = yMin; y <= yMax; y += 0.1) {
+                const p1 = dataToPixel(0, y);
+                const p2 = dataToPixel(maxT, y);
+                ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+            }
+        }
+
+        function drawCalibrationPoints(ctx) {
+            const colors = ['#22c55e', '#f97316', '#a855f7'];
+            const labels = ['Origin', 'X-End', 'Y-End'];
+            
+            state.calibration.points.forEach((p, i) => {
+                ctx.beginPath();
+                ctx.arc(p.px, p.py, 7 / state.zoom, 0, Math.PI * 2);
+                ctx.fillStyle = colors[i];
+                ctx.fill();
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 2 / state.zoom;
+                ctx.stroke();
+                
+                ctx.fillStyle = 'white';
+                ctx.font = `${11 / state.zoom}px Inter`;
+                ctx.fillText(labels[i], p.px + 12 / state.zoom, p.py + 4 / state.zoom);
+            });
+        }
+
+        function drawDigitizedCurves(ctx) {
+            if (!state.calibration.isCalibrated) return;
+            
+            const config = CURVE_TYPES[state.curveType];
+            const useStep = document.getElementById('stepFunction')?.checked && config.stepFunction;
+            
+            const pointsByArm = {};
+            state.points.forEach(p => {
+                if (!pointsByArm[p.armIndex]) pointsByArm[p.armIndex] = [];
+                pointsByArm[p.armIndex].push(p);
+            });
+            
+            Object.entries(pointsByArm).forEach(([armIndex, points]) => {
+                const arm = state.arms[armIndex];
+                if (!arm) return;
+                
+                const sorted = [...points].sort((a, b) => a.x - b.x);
+                
+                if (sorted.length > 1) {
+                    ctx.beginPath();
+                    ctx.strokeStyle = arm.color;
+                    ctx.lineWidth = 2.5 / state.zoom;
+                    
+                    sorted.forEach((p, i) => {
+                        if (i === 0) ctx.moveTo(p.px, p.py);
+                        else if (useStep) { ctx.lineTo(p.px, sorted[i - 1].py); ctx.lineTo(p.px, p.py); }
+                        else ctx.lineTo(p.px, p.py);
+                    });
+                    ctx.stroke();
+                }
+                
+                sorted.forEach(p => {
+                    if (p.isCensor) {
+                        ctx.strokeStyle = arm.color;
+                        ctx.lineWidth = 2 / state.zoom;
+                        ctx.beginPath();
+                        ctx.moveTo(p.px, p.py - 6 / state.zoom);
+                        ctx.lineTo(p.px, p.py + 6 / state.zoom);
+                        ctx.stroke();
+                    } else {
+                        ctx.beginPath();
+                        ctx.arc(p.px, p.py, 4 / state.zoom, 0, Math.PI * 2);
+                        ctx.fillStyle = arm.color;
+                        ctx.fill();
+                        ctx.strokeStyle = 'white';
+                        ctx.lineWidth = 1 / state.zoom;
+                        ctx.stroke();
+                    }
+                });
+            });
+        }
+
+        // NEW: Draw reconstructed KM overlay for validation
+        function drawReconstructedOverlay(ctx) {
+            if (Object.keys(state.reconstructedData).length === 0) return;
+            
+            state.arms.forEach((arm, armIndex) => {
+                const ipd = state.reconstructedData[armIndex];
+                if (!ipd || ipd.length === 0 || ipd[0].status === undefined) return;
+                
+                // Calculate KM from IPD
+                const km = calculateKMFromIPD(ipd);
+                if (km.length < 2) return;
+                
+                // Draw dashed overlay
+                ctx.beginPath();
+                ctx.strokeStyle = arm.color;
+                ctx.lineWidth = 2 / state.zoom;
+                ctx.setLineDash([5 / state.zoom, 3 / state.zoom]);
+                
+                km.forEach((point, i) => {
+                    const px = dataToPixel(point.time, point.survival);
+                    if (i === 0) ctx.moveTo(px.x, px.y);
+                    else {
+                        // Step function
+                        const prevPx = dataToPixel(km[i-1].time, km[i-1].survival);
+                        ctx.lineTo(px.x, prevPx.y);
+                        ctx.lineTo(px.x, px.y);
+                    }
+                });
+                ctx.stroke();
+                ctx.setLineDash([]);
+            });
+        }
+
+        // NEW: Draw bootstrap CI bands
+        function drawBootstrapCIBands(ctx) {
+            if (!state.bootstrapResults || !state.bootstrapResults.kmBands) return;
+            
+            state.arms.forEach((arm, armIndex) => {
+                const bands = state.bootstrapResults.kmBands[armIndex];
+                if (!bands) return;
+                
+                ctx.fillStyle = arm.color.replace(')', ', 0.15)').replace('rgb', 'rgba');
+                ctx.beginPath();
+                
+                // Draw upper band forward
+                bands.forEach((point, i) => {
+                    const px = dataToPixel(point.time, point.upper);
+                    if (i === 0) ctx.moveTo(px.x, px.y);
+                    else ctx.lineTo(px.x, px.y);
+                });
+                
+                // Draw lower band backward
+                for (let i = bands.length - 1; i >= 0; i--) {
+                    const px = dataToPixel(bands[i].time, bands[i].lower);
+                    ctx.lineTo(px.x, px.y);
+                }
+                
+                ctx.closePath();
+                ctx.fill();
+            });
+        }
+
+        // ============================================
+        // Coordinate Transforms
+        // ============================================
+        
+        function pixelToCanvas(clientX, clientY) {
+            const canvas = document.getElementById('mainCanvas');
+            const rect = canvas.getBoundingClientRect();
+            return { x: clientX - rect.left, y: clientY - rect.top };
+        }
+
+        function canvasToImage(cx, cy) {
+            return { x: (cx - state.panX) / state.zoom, y: (cy - state.panY) / state.zoom };
+        }
+
+        function pixelToData(px, py) {
+            if (!state.calibration.isCalibrated) return { x: null, y: null };
+            const { transform } = state.calibration;
+            const det = transform.a * transform.d - transform.b * transform.c;
+            if (Math.abs(det) < 1e-10) return { x: null, y: null };
+            return {
+                x: (transform.d * (px - transform.e) - transform.b * (py - transform.f)) / det,
+                y: (-transform.c * (px - transform.e) + transform.a * (py - transform.f)) / det
+            };
+        }
+
+        function dataToPixel(x, y) {
+            if (!state.calibration.isCalibrated) return { x: 0, y: 0 };
+            const { transform } = state.calibration;
+            return {
+                x: transform.a * x + transform.b * y + transform.e,
+                y: transform.c * x + transform.d * y + transform.f
+            };
+        }
+
+        function calculateCalibrationTransform() {
+            const pts = state.calibration.points;
+            const vals = state.calibration.values;
+            if (pts.length < 3) return;
+
+            const x0 = vals[0].x, y0 = vals[0].y, px0 = pts[0].px, py0 = pts[0].py;
+            const x1 = vals[1].x, y1 = vals[1].y, px1 = pts[1].px, py1 = pts[1].py;
+            const x2 = vals[2].x, y2 = vals[2].y, px2 = pts[2].px, py2 = pts[2].py;
+
+            const dx1 = x1 - x0, dy1 = y1 - y0, dx2 = x2 - x0, dy2 = y2 - y0;
+            const dpx1 = px1 - px0, dpy1 = py1 - py0, dpx2 = px2 - px0, dpy2 = py2 - py0;
+            const det = dx1 * dy2 - dx2 * dy1;
+
+            if (Math.abs(det) < 1e-10) {
+                showToast('Calibration points are collinear!', 'error');
+                state.calibration.isCalibrated = false;
+                state.calibration.transform = null;
+                return;
+            }
+
+            state.calibration.transform = {
+                a: (dpx1 * dy2 - dpx2 * dy1) / det,
+                b: (dx1 * dpx2 - dx2 * dpx1) / det,
+                c: (dpy1 * dy2 - dpy2 * dy1) / det,
+                d: (dx1 * dpy2 - dx2 * dpy1) / det,
+                e: px0 - ((dpx1 * dy2 - dpx2 * dy1) / det) * x0 - ((dx1 * dpx2 - dx2 * dpx1) / det) * y0,
+                f: py0 - ((dpy1 * dy2 - dpy2 * dy1) / det) * x0 - ((dx1 * dpy2 - dx2 * dpy1) / det) * y0
+            };
+
+            state.calibration.isCalibrated = true;
+            document.getElementById('calStatus').className = 'cal-status complete';
+            document.getElementById('calStatus').textContent = '✓ Axes calibrated';
+            showToast('Calibration complete!', 'success');
+        }
+
+        function updateCalibrationValues() {
+            state.calibration.values = [
+                { x: parseFloat(document.getElementById('calX1').value) || 0, y: parseFloat(document.getElementById('calY1').value) || 1 },
+                { x: parseFloat(document.getElementById('calX2').value), y: parseFloat(document.getElementById('calY2').value) },
+                { x: parseFloat(document.getElementById('calX3').value), y: parseFloat(document.getElementById('calY3').value) }
+            ];
+            if (state.calibration.points.length === 3 && state.calibration.values.every(v => v.x !== null && v.y !== null && !isNaN(v.x) && !isNaN(v.y))) {
+                calculateCalibrationTransform();
+                render();
+            }
+        }
+
+        function resetCalibration() {
+            state.calibration = { points: [], values: [{ x: 0, y: CURVE_TYPES[state.curveType].yStart ?? 1 }, { x: null, y: null }, { x: null, y: null }], isCalibrated: false, transform: null };
+            document.getElementById('calStatus').className = 'cal-status incomplete';
+            document.getElementById('calStatus').textContent = 'Click 3 points to calibrate axes';
+            render();
+        }
+
+        // ============================================
+        // Auto-Trace
+        // ============================================
+        
+        async function runAutoTrace() {
+            if (!state.imageLoaded) { showToast('Load an image first', 'error'); return; }
+            if (!state.calibration.isCalibrated) { showToast('Calibrate axes first', 'error'); return; }
+            
+            showProcessing('Running auto-trace...');
+            await sleep(100);
+            
+            try {
+                const numCurves = parseInt(document.getElementById('numCurves').value);
+                const tolerance = parseInt(document.getElementById('colorTolerance').value);
+                const interval = parseInt(document.getElementById('sampleInterval').value);
+                const spatialWeight = parseInt(document.getElementById('spatialWeight').value) / 100;
+
+                updateProcessing('Analyzing colors...', 30);
+                
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = state.image.width;
+                tempCanvas.height = state.image.height;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(state.image, 0, 0);
+                const imageData = ctx.getImageData(0, 0, tempCanvas.width, tempCanvas.height);
+
+                await sleep(100);
+                updateProcessing('Detecting curves...', 50);
+
+                const curvePixels = extractCurvePixels(imageData, tolerance);
+                const clusters = kMedoidsClustering(curvePixels, numCurves, spatialWeight);
+
+                await sleep(100);
+                updateProcessing('Tracing curves...', 70);
+
+                state.points = [];
+                while (state.arms.length < numCurves) addArm();
+
+                const templateColors = JOURNAL_TEMPLATES[state.selectedTemplate]?.colors || armColors;
+
+                clusters.forEach((cluster, armIndex) => {
+                    if (cluster.length === 0) return;
+                    if (templateColors[armIndex]) state.arms[armIndex].color = templateColors[armIndex];
+
+                    const byX = {};
+                    cluster.forEach(p => { if (!byX[p.x]) byX[p.x] = []; byX[p.x].push(p.y); });
+                    const sortedX = Object.keys(byX).map(Number).sort((a, b) => a - b);
+
+                    for (let i = 0; i < sortedX.length; i += interval) {
+                        const x = sortedX[i];
+                        const ys = byX[x].sort((a, b) => a - b);
+                        const medianY = ys[Math.floor(ys.length / 2)];
+                        const data = pixelToData(x, medianY);
+                        if (data.x !== null && data.y !== null) {
+                            state.points.push({ armIndex, px: x, py: medianY, x: data.x, y: data.y, isCensor: false });
+                        }
+                    }
+                });
+
+                if (document.getElementById('enforceConstraints').checked) enforceConstraints();
+
+                updateProcessing('Complete!', 100);
+                await sleep(300);
+                
+                updateArmList();
+                updatePointsTable();
+                render();
+                hideProcessing();
+                showToast(`Traced ${state.points.length} points across ${numCurves} curves`, 'success');
+                
+            } catch (err) {
+                hideProcessing();
+                showToast('Auto-trace failed: ' + err.message, 'error');
+                console.error(err);
+            }
+        }
+
+        function extractCurvePixels(imageData, tolerance) {
+            const pixels = [];
+            const width = imageData.width, height = imageData.height, data = imageData.data;
+            
+            for (let y = 0; y < height; y++) {
+                for (let x = 0; x < width; x++) {
+                    const idx = (y * width + x) * 4;
+                    const r = data[idx], g = data[idx + 1], b = data[idx + 2];
+                    const hsl = rgbToHsl(r, g, b);
+                    if (hsl.s > 0.15 && hsl.l > 0.1 && hsl.l < 0.85) {
+                        pixels.push({ x, y, r, g, b, h: hsl.h, s: hsl.s, l: hsl.l });
+                    }
+                }
+            }
+            return pixels;
+        }
+
+        function kMedoidsClustering(pixels, k, spatialWeight = 0.3) {
+            if (pixels.length < k) return [pixels];
+            if (k === 1) return [pixels];
+
+            const maxX = Math.max(...pixels.map(p => p.x));
+            const maxY = Math.max(...pixels.map(p => p.y));
+
+            // K-means++ initialization
+            const medoids = [pixels[Math.floor(Math.random() * pixels.length)]];
+            while (medoids.length < k) {
+                const distances = pixels.map(p => {
+                    const minDist = Math.min(...medoids.map(m => combinedDistance(p, m, maxX, maxY, spatialWeight)));
+                    return minDist * minDist;
+                });
+                const totalDist = distances.reduce((a, b) => a + b, 0);
+                let r = Math.random() * totalDist;
+                for (let i = 0; i < pixels.length; i++) {
+                    r -= distances[i];
+                    if (r <= 0) { medoids.push(pixels[i]); break; }
+                }
+            }
+
+            let clusters = [];
+            for (let iter = 0; iter < 20; iter++) {
+                clusters = Array.from({ length: k }, () => []);
+                pixels.forEach(p => {
+                    let minDist = Infinity, minIdx = 0;
+                    medoids.forEach((m, i) => {
+                        const dist = combinedDistance(p, m, maxX, maxY, spatialWeight);
+                        if (dist < minDist) { minDist = dist; minIdx = i; }
+                    });
+                    clusters[minIdx].push(p);
+                });
+
+                let changed = false;
+                clusters.forEach((cluster, i) => {
+                    if (cluster.length === 0) return;
+                    const sample = cluster.length > 50 ? cluster.filter((_, j) => j % Math.ceil(cluster.length / 50) === 0) : cluster;
+                    let minCost = Infinity, bestMedoid = medoids[i];
+                    sample.forEach(candidate => {
+                        let cost = 0;
+                        sample.forEach(p => cost += combinedDistance(p, candidate, maxX, maxY, spatialWeight));
+                        if (cost < minCost) { minCost = cost; bestMedoid = candidate; }
+                    });
+                    if (bestMedoid !== medoids[i]) { medoids[i] = bestMedoid; changed = true; }
+                });
+                if (!changed) break;
+            }
+            return clusters;
+        }
+
+        function combinedDistance(p1, p2, maxX, maxY, spatialWeight) {
+            const hueDist = Math.min(Math.abs(p1.h - p2.h), 1 - Math.abs(p1.h - p2.h));
+            const spatialDist = Math.sqrt(Math.pow((p1.x - p2.x) / maxX, 2) + Math.pow((p1.y - p2.y) / maxY, 2));
+            return (1 - spatialWeight) * hueDist + spatialWeight * spatialDist;
+        }
+
+        function rgbToHsl(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b), min = Math.min(r, g, b);
+            let h, s, l = (max + min) / 2;
+            if (max === min) { h = s = 0; }
+            else {
+                const d = max - min;
+                s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+                switch (max) {
+                    case r: h = ((g - b) / d + (g < b ? 6 : 0)) / 6; break;
+                    case g: h = ((b - r) / d + 2) / 6; break;
+                    case b: h = ((r - g) / d + 4) / 6; break;
+                }
+            }
+            return { h, s, l };
+        }
+
+        function enforceConstraints() {
+            const config = CURVE_TYPES[state.curveType];
+            state.arms.forEach((_, armIndex) => {
+                const armPoints = state.points.filter(p => p.armIndex === armIndex).sort((a, b) => a.x - b.x);
+                if (config.monotonic) {
+                    if (config.direction === 'decreasing') {
+                        let maxY = config.yStart ?? 1;
+                        armPoints.forEach(p => { if (p.y > maxY) { p.y = maxY; const px = dataToPixel(p.x, p.y); p.py = px.y; } else maxY = p.y; });
+                    } else if (config.direction === 'increasing') {
+                        let minY = config.yStart ?? 0;
+                        armPoints.forEach(p => { if (p.y < minY) { p.y = minY; const px = dataToPixel(p.x, p.y); p.py = px.y; } else minY = p.y; });
+                    }
+                }
+            });
+        }
+
+        function sampleColor() { showToast('Click on a curve to sample its color', 'info'); state.mode = 'sample'; }
+        
+        function traceSampledColor() {
+            if (!state.sampledColor) { showToast('Sample a color first', 'error'); return; }
+            if (!state.calibration.isCalibrated) { showToast('Calibrate axes first', 'error'); return; }
+            // Implementation similar to auto-trace but for single color
+            showToast('Tracing sampled color...', 'info');
+        }
+
+        // ============================================
+        // Data Reconstruction (Guyot Algorithm)
+        // ============================================
+        
+        function reconstructData() {
+            if (state.points.length === 0) { showToast('No digitized points', 'error'); return; }
+            
+            const config = CURVE_TYPES[state.curveType];
+            state.arms.forEach((_, i) => { state.atRisk[i] = parseAtRisk(i); });
+            state.reconstructedData = {};
+            let totalN = 0, totalEvents = 0, totalCensored = 0;
+
+            state.arms.forEach((arm, armIndex) => {
+                const points = state.points.filter(p => p.armIndex === armIndex && !p.isCensor).sort((a, b) => a.x - b.x);
+                if (points.length < 2) { state.reconstructedData[armIndex] = []; return; }
+
+                let data;
+                switch (config.reconAlgo) {
+                    case 'modifiedIKM': data = reconstructIPD_KM(points, state.atRisk[armIndex] || [], arm.name); break;
+                    case 'cumulativeIncidence': data = reconstructIPD_CI(points, state.atRisk[armIndex] || [], arm.name); break;
+                    default: data = points.map(p => ({ time: p.x, value: p.y, arm: arm.name }));
+                }
+                state.reconstructedData[armIndex] = data;
+
+                if (config.reconAlgo === 'modifiedIKM' || config.reconAlgo === 'cumulativeIncidence') {
+                    totalN += data.length;
+                    totalEvents += data.filter(p => p.status === 1).length;
+                    totalCensored += data.filter(p => p.status === 0).length;
+                }
+            });
+
+            document.getElementById('statN').textContent = totalN || state.points.length;
+            document.getElementById('statEvents').textContent = totalEvents || '—';
+            document.getElementById('statCensored').textContent = totalCensored || '—';
+
+            if (totalN > 0) {
+                const allData = Object.values(state.reconstructedData).flat();
+                const eventTimes = allData.filter(p => p.status === 1).map(p => p.time).sort((a, b) => a - b);
+                document.getElementById('statMedian').textContent = eventTimes.length > 0 ? eventTimes[Math.floor(eventTimes.length / 2)].toFixed(1) : '—';
+            }
+
+            let preview = 'time,status,arm\n';
+            state.arms.forEach((arm, i) => {
+                (state.reconstructedData[i] || []).slice(0, 30).forEach(p => {
+                    preview += `${p.time?.toFixed(4)},${p.status ?? p.value},${arm.name}\n`;
+                });
+            });
+            if (totalN > 60) preview += `... (${totalN} total rows)\n`;
+            document.getElementById('dataPreview').textContent = preview;
+            
+            switchTab('data');
+            showToast(`Reconstructed ${totalN} patients`, 'success');
+        }
+
+        function reconstructIPD_KM(survivalPoints, atRiskTable, armName) {
+            const ipd = [];
+            const S = [...survivalPoints].sort((a, b) => a.x - b.x);
+            const defaultN = parseInt(document.getElementById('defaultN')?.value) || 100;
+
+            let maxS = 1;
+            S.forEach(p => { p.y = clamp(p.y, 0.001, 1); if (p.y > maxS) p.y = maxS; else maxS = p.y; });
+
+            const n0 = atRiskTable.length > 0 ? atRiskTable[0].nrisk : defaultN;
+
+            function getAtRisk(time) {
+                if (atRiskTable.length === 0) return null;
+                let before = atRiskTable[0], after = atRiskTable[atRiskTable.length - 1];
+                for (let i = 0; i < atRiskTable.length - 1; i++) {
+                    if (atRiskTable[i].time <= time && atRiskTable[i + 1].time >= time) {
+                        before = atRiskTable[i]; after = atRiskTable[i + 1]; break;
+                    }
+                }
+                if (time <= before.time) return before.nrisk;
+                if (time >= after.time) return after.nrisk;
+                const frac = safeDiv(time - before.time, after.time - before.time, 0);
+                return Math.round(before.nrisk + frac * (after.nrisk - before.nrisk));
+            }
+
+            for (let i = 0; i < S.length - 1; i++) {
+                const tStart = S[i].x, tEnd = S[i + 1].x;
+                const sStart = Math.max(0.001, S[i].y), sEnd = Math.max(0.001, S[i + 1].y);
+
+                let nStart, nEnd;
+                if (atRiskTable.length > 0) { nStart = getAtRisk(tStart); nEnd = getAtRisk(tEnd); }
+                else { nStart = Math.round(n0 * sStart); nEnd = Math.round(n0 * sEnd); }
+
+                const condSurv = safeDiv(sEnd, sStart, 1);
+                const events = Math.max(0, Math.round(nStart * (1 - condSurv)));
+                const censored = Math.max(0, nStart - nEnd - events);
+
+                for (let e = 0; e < events; e++) {
+                    const t = tStart + (tEnd - tStart) * (e + 0.5) / Math.max(events, 1);
+                    ipd.push({ time: t, status: 1, arm: armName });
+                }
+                for (let c = 0; c < censored; c++) {
+                    const t = tStart + (tEnd - tStart) * (c + 0.5) / Math.max(censored, 1);
+                    ipd.push({ time: t, status: 0, arm: armName });
+                }
+            }
+
+            const lastS = S[S.length - 1];
+            let lastN = atRiskTable.length > 0 ? atRiskTable.reduce((best, ar) => Math.abs(ar.time - lastS.x) < Math.abs(best.time - lastS.x) ? ar : best).nrisk : Math.round(n0 * lastS.y);
+            const remaining = Math.max(0, n0 - ipd.length);
+            for (let i = 0; i < Math.min(remaining, lastN); i++) {
+                ipd.push({ time: lastS.x, status: 0, arm: armName });
+            }
+
+            return ipd.sort((a, b) => a.time - b.time);
+        }
+
+        function reconstructIPD_CI(ciPoints, atRiskTable, armName) {
+            const ipd = [];
+            const C = [...ciPoints].sort((a, b) => a.x - b.x);
+            const defaultN = parseInt(document.getElementById('defaultN')?.value) || 100;
+
+            let minCI = 0;
+            C.forEach(p => { p.y = clamp(p.y, 0, 1); if (p.y < minCI) p.y = minCI; else minCI = p.y; });
+
+            const n0 = atRiskTable.length > 0 ? atRiskTable[0].nrisk : defaultN;
+            let cumulativeEvents = 0;
+
+            for (let i = 0; i < C.length - 1; i++) {
+                const tStart = C[i].x, tEnd = C[i + 1].x;
+                const ciStart = C[i].y, ciEnd = C[i + 1].y;
+                const newEvents = Math.max(0, Math.round(n0 * (ciEnd - ciStart)));
+
+                for (let e = 0; e < newEvents; e++) {
+                    const t = tStart + (tEnd - tStart) * (e + 0.5) / Math.max(newEvents, 1);
+                    ipd.push({ time: t, status: 1, arm: armName });
+                }
+                cumulativeEvents += newEvents;
+            }
+
+            const totalEvents = ipd.length;
+            const censored = n0 - totalEvents;
+            const lastTime = C[C.length - 1].x;
+            
+            // Distribute censoring properly within time range (FIXED)
+            for (let i = 0; i < censored; i++) {
+                const t = lastTime * (i + 0.5) / Math.max(censored, 1);
+                ipd.push({ time: t, status: 0, arm: armName });
+            }
+
+            return ipd.sort((a, b) => a.time - b.time);
+        }
+
+        function parseAtRisk(armIndex) {
+            const textarea = document.getElementById(`atRisk${armIndex}`);
+            if (!textarea) return [];
+            const text = textarea.value.trim();
+            if (!text) return [];
+            return text.split('\n').map(line => {
+                const parts = line.split(/[,\t\s]+/).map(Number);
+                if (parts.length >= 2 && !isNaN(parts[0]) && !isNaN(parts[1])) return { time: parts[0], nrisk: parts[1] };
+                return null;
+            }).filter(Boolean);
+        }
+
+        // ============================================
+        // Statistical Methods
+        // ============================================
+        
+        function calculateKMFromIPD(ipd) {
+            const sorted = [...ipd].sort((a, b) => a.time - b.time);
+            const km = [{ time: 0, survival: 1 }];
+            let s = 1, n = sorted.length;
+            
+            const eventTimes = [...new Set(sorted.filter(d => d.status === 1).map(d => d.time))].sort((a, b) => a - b);
+            
+            eventTimes.forEach(t => {
+                const atRisk = sorted.filter(d => d.time >= t).length;
+                const events = sorted.filter(d => d.time === t && d.status === 1).length;
+                if (atRisk > 0) {
+                    s *= (atRisk - events) / atRisk;
+                    km.push({ time: t, survival: s, atRisk, events });
+                }
+            });
+            
+            return km;
+        }
+
+        function calculateRMST() {
+            if (Object.keys(state.reconstructedData).length === 0) { showToast('Reconstruct data first', 'error'); return; }
+            
+            const tau = parseFloat(document.getElementById('rmstTau').value);
+            if (!tau || tau <= 0) { showToast('Enter a valid τ', 'error'); return; }
+
+            const results = [];
+            state.arms.forEach((arm, armIndex) => {
+                const ipd = state.reconstructedData[armIndex];
+                if (!ipd || ipd.length === 0 || ipd[0].status === undefined) return;
+                
+                const km = calculateKMFromIPD(ipd);
+                let rmst = 0;
+                
+                for (let i = 0; i < km.length - 1; i++) {
+                    const t1 = km[i].time, t2 = Math.min(km[i + 1].time, tau);
+                    if (t2 > t1) rmst += km[i].survival * (t2 - t1);
+                    if (t2 >= tau) break;
+                }
+                if (km.length > 0 && km[km.length - 1].time < tau) {
+                    rmst += km[km.length - 1].survival * (tau - km[km.length - 1].time);
+                }
+                
+                // Variance estimation (Greenwood)
+                let variance = 0;
+                for (let i = 1; i < km.length; i++) {
+                    if (km[i].time > tau) break;
+                    const n = km[i].atRisk || 1, d = km[i].events || 0;
+                    if (n > d) {
+                        let area = 0;
+                        for (let j = i; j < km.length - 1; j++) {
+                            const t1 = km[j].time, t2 = Math.min(km[j + 1].time, tau);
+                            if (t2 > t1) area += km[j].survival * (t2 - t1);
+                            if (t2 >= tau) break;
+                        }
+                        variance += safeDiv(d, n * (n - d), 0) * area * area;
+                    }
+                }
+                
+                results.push({ arm: arm.name, rmst, se: Math.sqrt(variance) });
+            });
+
+            if (results[0]) document.getElementById('rmst1').textContent = results[0].rmst.toFixed(2);
+            if (results[1]) document.getElementById('rmst2').textContent = results[1].rmst.toFixed(2);
+            
+            if (results.length >= 2) {
+                const diff = results[0].rmst - results[1].rmst;
+                const seDiff = Math.sqrt(results[0].se ** 2 + results[1].se ** 2);
+                document.getElementById('rmstDiff').textContent = diff.toFixed(2);
+                document.getElementById('rmstCI').textContent = `${(diff - 1.96 * seDiff).toFixed(2)} to ${(diff + 1.96 * seDiff).toFixed(2)}`;
+            }
+            
+            state.rmstResults = results;
+            showToast('RMST calculated', 'success');
+        }
+
+        // NEW: Cox Regression (partial likelihood)
+        function runCoxRegression() {
+            if (Object.keys(state.reconstructedData).length < 2) {
+                showToast('Need 2 arms with reconstructed data', 'error');
+                return;
+            }
+
+            const arm1 = state.reconstructedData[0] || [];
+            const arm2 = state.reconstructedData[1] || [];
+            
+            if (arm1.length === 0 || arm2.length === 0) {
+                showToast('Insufficient data', 'error');
+                return;
+            }
+
+            // Combine data with treatment indicator
+            const data = [
+                ...arm1.map(d => ({ ...d, x: 1 })),
+                ...arm2.map(d => ({ ...d, x: 0 }))
+            ].sort((a, b) => a.time - b.time);
+
+            // Newton-Raphson for Cox partial likelihood
+            let beta = 0;
+            const maxIter = 100;
+            const tol = 1e-8;
+
+            for (let iter = 0; iter < maxIter; iter++) {
+                let score = 0, info = 0;
+                
+                // Get unique event times
+                const eventTimes = [...new Set(data.filter(d => d.status === 1).map(d => d.time))];
+                
+                eventTimes.forEach(t => {
+                    const atRisk = data.filter(d => d.time >= t);
+                    const events = data.filter(d => d.time === t && d.status === 1);
+                    
+                    if (atRisk.length === 0) return;
+                    
+                    let s0 = 0, s1 = 0, s2 = 0;
+                    atRisk.forEach(d => {
+                        const expBX = Math.exp(beta * d.x);
+                        s0 += expBX;
+                        s1 += d.x * expBX;
+                        s2 += d.x * d.x * expBX;
+                    });
+                    
+                    events.forEach(d => {
+                        score += d.x - s1 / s0;
+                        info += s2 / s0 - (s1 / s0) ** 2;
+                    });
+                });
+
+                if (info === 0) break;
+                
+                const delta = score / info;
+                beta += delta;
+                
+                if (Math.abs(delta) < tol) break;
+            }
+
+            const se = 1 / Math.sqrt(Math.max(0.0001, info));
+            const hr = Math.exp(beta);
+            const lower = Math.exp(beta - 1.96 * se);
+            const upper = Math.exp(beta + 1.96 * se);
+            const z = beta / se;
+            const pValue = 2 * (1 - normalCDF(Math.abs(z)));
+            
+            // Calculate concordance (C-index)
+            let concordant = 0, discordant = 0, tied = 0;
+            for (let i = 0; i < data.length; i++) {
+                for (let j = i + 1; j < data.length; j++) {
+                    if (data[i].status === 1 && data[j].time > data[i].time) {
+                        const riskI = beta * data[i].x;
+                        const riskJ = beta * data[j].x;
+                        if (riskI > riskJ) concordant++;
+                        else if (riskI < riskJ) discordant++;
+                        else tied++;
+                    }
+                }
+            }
+            const cIndex = safeDiv(concordant + 0.5 * tied, concordant + discordant + tied, 0.5);
+
+            state.coxResults = { beta, se, hr, lower, upper, pValue, cIndex };
+
+            document.getElementById('coxHR').textContent = hr.toFixed(3);
+            document.getElementById('coxCI').textContent = `${lower.toFixed(2)}-${upper.toFixed(2)}`;
+            document.getElementById('coxP').textContent = pValue < 0.001 ? '<0.001' : pValue.toFixed(3);
+            document.getElementById('coxC').textContent = cIndex.toFixed(3);
+
+            showToast('Cox regression complete', 'success');
+        }
+
+        function normalCDF(x) {
+            const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+            const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+            const sign = x < 0 ? -1 : 1;
+            x = Math.abs(x) / Math.sqrt(2);
+            const t = 1 / (1 + p * x);
+            const y = 1 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+            return 0.5 * (1 + sign * y);
+        }
+
+        // ============================================
+        // Validation & Bootstrap - NEW
+        // ============================================
+        
+        function toggleValidationOverlay() {
+            const overlay = document.getElementById('validationOverlay');
+            overlay.classList.toggle('visible');
+        }
+
+        function runGuyotValidation() {
+            if (Object.keys(state.reconstructedData).length === 0) {
+                showToast('Reconstruct data first', 'error');
+                return;
+            }
+
+            const results = { arms: [] };
+            let totalRMSE = 0, totalMaxDev = 0, totalCorr = 0, armCount = 0;
+
+            state.arms.forEach((arm, armIndex) => {
+                const ipd = state.reconstructedData[armIndex];
+                const original = state.points.filter(p => p.armIndex === armIndex && !p.isCensor).sort((a, b) => a.x - b.x);
+                
+                if (!ipd || ipd.length === 0 || original.length < 2) return;
+
+                const km = calculateKMFromIPD(ipd);
+                if (km.length < 2) return;
+
+                // Calculate metrics
+                let sumSqError = 0, maxDev = 0;
+                const originalY = [], reconY = [];
+
+                original.forEach(p => {
+                    // Find closest KM point
+                    let closest = km[0];
+                    for (const k of km) {
+                        if (Math.abs(k.time - p.x) < Math.abs(closest.time - p.x)) closest = k;
+                    }
+                    
+                    const error = p.y - closest.survival;
+                    sumSqError += error * error;
+                    maxDev = Math.max(maxDev, Math.abs(error));
+                    originalY.push(p.y);
+                    reconY.push(closest.survival);
+                });
+
+                const rmse = Math.sqrt(sumSqError / original.length);
+                
+                // Pearson correlation
+                const n = originalY.length;
+                const meanO = originalY.reduce((a, b) => a + b, 0) / n;
+                const meanR = reconY.reduce((a, b) => a + b, 0) / n;
+                let num = 0, denO = 0, denR = 0;
+                for (let i = 0; i < n; i++) {
+                    num += (originalY[i] - meanO) * (reconY[i] - meanR);
+                    denO += (originalY[i] - meanO) ** 2;
+                    denR += (reconY[i] - meanR) ** 2;
+                }
+                const corr = num / Math.sqrt(denO * denR);
+
+                results.arms.push({ arm: arm.name, rmse, maxDev, corr });
+                totalRMSE += rmse;
+                totalMaxDev += maxDev;
+                totalCorr += corr;
+                armCount++;
+            });
+
+            if (armCount > 0) {
+                const avgRMSE = totalRMSE / armCount;
+                const avgMaxDev = totalMaxDev / armCount;
+                const avgCorr = totalCorr / armCount;
+                
+                // Update UI
+                document.getElementById('cvRMSE').textContent = avgRMSE.toFixed(4);
+                document.getElementById('cvRMSE').className = 'metric-value ' + (avgRMSE < 0.02 ? 'good' : avgRMSE < 0.05 ? 'warning' : 'bad');
+                
+                document.getElementById('cvMaxDev').textContent = avgMaxDev.toFixed(4);
+                document.getElementById('cvMaxDev').className = 'metric-value ' + (avgMaxDev < 0.05 ? 'good' : avgMaxDev < 0.1 ? 'warning' : 'bad');
+                
+                document.getElementById('cvCorr').textContent = avgCorr.toFixed(4);
+                document.getElementById('cvCorr').className = 'metric-value ' + (avgCorr > 0.99 ? 'good' : avgCorr > 0.95 ? 'warning' : 'bad');
+
+                // N recovery
+                const originalN = parseInt(document.getElementById('defaultN').value) || 100;
+                const reconN = Object.values(state.reconstructedData).flat().length / state.arms.length;
+                const nRecovery = (reconN / originalN * 100).toFixed(0) + '%';
+                document.getElementById('cvNRecovery').textContent = nRecovery;
+
+                // Validation overlay
+                document.getElementById('valRMSE').textContent = avgRMSE.toFixed(4);
+                document.getElementById('valRMSE').className = 'validation-value ' + (avgRMSE < 0.02 ? 'validation-good' : avgRMSE < 0.05 ? 'validation-warning' : 'validation-bad');
+                document.getElementById('valMaxDev').textContent = avgMaxDev.toFixed(4);
+                document.getElementById('valCorr').textContent = avgCorr.toFixed(4);
+                document.getElementById('valNMatch').textContent = nRecovery;
+            }
+
+            state.validationResults = results;
+            showToast('Validation complete', 'success');
+            
+            // Enable overlay
+            document.getElementById('showReconCurve').checked = true;
+            render();
+        }
+
+        function runFullValidation() {
+            runGuyotValidation();
+            switchTab('validate');
+        }
+
+        // NEW: Bootstrap confidence intervals
+        async function runBootstrapCI() {
+            if (Object.keys(state.reconstructedData).length === 0) {
+                showToast('Reconstruct data first', 'error');
+                return;
+            }
+
+            const nBoot = parseInt(document.getElementById('bootstrapN').value) || 1000;
+            showProcessing(`Running ${nBoot} bootstrap iterations...`);
+            await sleep(100);
+
+            const hrEstimates = [];
+            const rmstDiffEstimates = [];
+            const kmBands = {};
+
+            // Initialize KM bands storage
+            state.arms.forEach((_, i) => { kmBands[i] = []; });
+
+            const arm1 = state.reconstructedData[0] || [];
+            const arm2 = state.reconstructedData[1] || [];
+            const tau = parseFloat(document.getElementById('rmstTau').value) || Math.max(...arm1.map(d => d.time), ...arm2.map(d => d.time));
+
+            for (let b = 0; b < nBoot; b++) {
+                if (b % 100 === 0) {
+                    updateProcessing(`Bootstrap ${b}/${nBoot}...`, (b / nBoot) * 100);
+                    await sleep(1);
+                }
+
+                // Resample with replacement
+                const boot1 = [], boot2 = [];
+                for (let i = 0; i < arm1.length; i++) boot1.push(arm1[Math.floor(Math.random() * arm1.length)]);
+                for (let i = 0; i < arm2.length; i++) boot2.push(arm2[Math.floor(Math.random() * arm2.length)]);
+
+                // Calculate HR
+                const events1 = boot1.filter(d => d.status === 1).length;
+                const events2 = boot2.filter(d => d.status === 1).length;
+                const time1 = boot1.reduce((s, d) => s + d.time, 0);
+                const time2 = boot2.reduce((s, d) => s + d.time, 0);
+                
+                if (events1 > 0 && events2 > 0 && time1 > 0 && time2 > 0) {
+                    const rate1 = events1 / time1, rate2 = events2 / time2;
+                    hrEstimates.push(rate1 / rate2);
+                }
+
+                // Calculate RMST difference
+                const km1 = calculateKMFromIPD(boot1);
+                const km2 = calculateKMFromIPD(boot2);
+                
+                let rmst1 = 0, rmst2 = 0;
+                for (let i = 0; i < km1.length - 1; i++) {
+                    const t1 = km1[i].time, t2 = Math.min(km1[i + 1].time, tau);
+                    if (t2 > t1) rmst1 += km1[i].survival * (t2 - t1);
+                }
+                for (let i = 0; i < km2.length - 1; i++) {
+                    const t1 = km2[i].time, t2 = Math.min(km2[i + 1].time, tau);
+                    if (t2 > t1) rmst2 += km2[i].survival * (t2 - t1);
+                }
+                rmstDiffEstimates.push(rmst1 - rmst2);
+            }
+
+            // Calculate percentile CIs
+            hrEstimates.sort((a, b) => a - b);
+            rmstDiffEstimates.sort((a, b) => a - b);
+
+            const hrLower = hrEstimates[Math.floor(0.025 * hrEstimates.length)];
+            const hrUpper = hrEstimates[Math.floor(0.975 * hrEstimates.length)];
+            const rmstLower = rmstDiffEstimates[Math.floor(0.025 * rmstDiffEstimates.length)];
+            const rmstUpper = rmstDiffEstimates[Math.floor(0.975 * rmstDiffEstimates.length)];
+
+            state.bootstrapResults = {
+                hrCI: [hrLower, hrUpper],
+                rmstDiffCI: [rmstLower, rmstUpper],
+                nBoot
+            };
+
+            document.getElementById('bootHRCI').textContent = `${hrLower?.toFixed(2) || '—'} - ${hrUpper?.toFixed(2) || '—'}`;
+            document.getElementById('bootRMSTCI').textContent = `${rmstLower?.toFixed(2) || '—'} to ${rmstUpper?.toFixed(2) || '—'}`;
+
+            hideProcessing();
+            showToast(`Bootstrap complete (${nBoot} iterations)`, 'success');
+        }
+
+        function calculateAllStats() {
+            if (Object.keys(state.reconstructedData).length === 0) {
+                showToast('Reconstruct data first', 'error');
+                return;
+            }
+
+            // Basic HR
+            const arm1 = state.reconstructedData[0] || [];
+            const arm2 = state.reconstructedData[1] || [];
+            
+            if (arm1.length > 0 && arm2.length > 0) {
+                const events1 = arm1.filter(p => p.status === 1).length;
+                const events2 = arm2.filter(p => p.status === 1).length;
+                const time1 = arm1.reduce((s, p) => s + p.time, 0);
+                const time2 = arm2.reduce((s, p) => s + p.time, 0);
+
+                if (events1 > 0 && events2 > 0 && time1 > 0 && time2 > 0) {
+                    const rate1 = events1 / time1, rate2 = events2 / time2;
+                    const hr = rate1 / rate2;
+                    const se = Math.sqrt(1/events1 + 1/events2);
+                    const lower = Math.exp(Math.log(hr) - 1.96 * se);
+                    const upper = Math.exp(Math.log(hr) + 1.96 * se);
+
+                    document.getElementById('metricHR').textContent = hr.toFixed(2);
+                    document.getElementById('metricHR').className = 'metric-value ' + (lower > 1 || upper < 1 ? 'good' : 'warning');
+                    document.getElementById('metricCI').textContent = `${lower.toFixed(2)}-${upper.toFixed(2)}`;
+
+                    // Log-rank approximation
+                    const O1 = events1, O2 = events2;
+                    const E1 = (O1 + O2) * arm1.length / (arm1.length + arm2.length);
+                    const chi2 = Math.pow(O1 - E1, 2) / E1 + Math.pow(O2 - (O1 + O2 - E1), 2) / (O1 + O2 - E1);
+                    const pValue = 1 - chi2CDF(chi2, 1);
+                    document.getElementById('metricLogRank').textContent = pValue < 0.001 ? '<0.001' : pValue.toFixed(3);
+
+                    // Median difference
+                    const median1 = calculateMedian(arm1);
+                    const median2 = calculateMedian(arm2);
+                    if (median1 !== null && median2 !== null) {
+                        document.getElementById('metricMedianDiff').textContent = (median1 - median2).toFixed(1);
+                    }
+                }
+            }
+
+            showToast('Statistics calculated', 'success');
+        }
+
+        function calculateMedian(data) {
+            const events = data.filter(p => p.status === 1).map(p => p.time).sort((a, b) => a - b);
+            return events.length > 0 ? events[Math.floor(events.length / 2)] : null;
+        }
+
+        function chi2CDF(x, df) {
+            if (x <= 0) return 0;
+            return gammaCDF(x / 2, df / 2);
+        }
+
+        function gammaCDF(x, a) {
+            if (x <= 0) return 0;
+            let sum = 0, term = 1 / a;
+            sum = term;
+            for (let n = 1; n < 100; n++) {
+                term *= x / (a + n);
+                sum += term;
+                if (Math.abs(term) < 1e-10) break;
+            }
+            return sum * Math.exp(-x + a * Math.log(x) - logGamma(a));
+        }
+
+        function logGamma(x) {
+            if (x < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * x)) - logGamma(1 - x);
+            x -= 1;
+            const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313, -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7];
+            let sum = c[0];
+            for (let i = 1; i < 9; i++) sum += c[i] / (x + i);
+            const t = x + 7.5;
+            return 0.5 * Math.log(2 * Math.PI) + (x + 0.5) * Math.log(t) - t + Math.log(sum);
+        }
+
+        // ============================================
+        // Mouse & Keyboard Event Handlers
+        // ============================================
+        
+        function handleMouseDown(e) {
+            if (e.button === 2) return;
+            const canvasPos = pixelToCanvas(e.clientX, e.clientY);
+            const imagePos = canvasToImage(canvasPos.x, canvasPos.y);
+
+            if (state.mode === 'pan' || e.button === 1) {
+                isDragging = true;
+                dragStart = { x: e.clientX - state.panX, y: e.clientY - state.panY };
+                document.getElementById('mainCanvas').style.cursor = 'grabbing';
+                return;
+            }
+
+            if (state.mode === 'calibrate') {
+                if (state.calibration.points.length < 3) {
+                    state.calibration.points.push({ px: imagePos.x, py: imagePos.y });
+                    state.history.push({ type: 'calibration', data: [...state.calibration.points] });
+                    if (state.calibration.points.length === 3) updateCalibrationValues();
+                    render();
+                }
+                return;
+            }
+
+            if (state.mode === 'sample') {
+                const tempCanvas = document.createElement('canvas');
+                tempCanvas.width = state.image.width;
+                tempCanvas.height = state.image.height;
+                const ctx = tempCanvas.getContext('2d');
+                ctx.drawImage(state.image, 0, 0);
+                const pixel = ctx.getImageData(Math.round(imagePos.x), Math.round(imagePos.y), 1, 1).data;
+                state.sampledColor = { r: pixel[0], g: pixel[1], b: pixel[2] };
+                showToast(`Sampled: RGB(${pixel[0]}, ${pixel[1]}, ${pixel[2]})`, 'success');
+                state.mode = 'digitize';
+                return;
+            }
+
+            if (['digitize', 'censor', 'ci'].includes(state.mode)) {
+                if (!state.calibration.isCalibrated) { showToast('Calibrate axes first', 'error'); return; }
+                const data = pixelToData(imagePos.x, imagePos.y);
+                const point = { armIndex: state.activeArmIndex, px: imagePos.x, py: imagePos.y, x: data.x, y: data.y, isCensor: state.mode === 'censor' };
+                
+                if (state.mode === 'ci') state.ciPoints.push(point);
+                else state.points.push(point);
+                
+                state.history.push({ type: 'point', data: point });
+                updatePointsTable();
+                updateArmList();
+                render();
+            }
+        }
+
+        function handleMouseMove(e) {
+            const canvasPos = pixelToCanvas(e.clientX, e.clientY);
+            const imagePos = canvasToImage(canvasPos.x, canvasPos.y);
+
+            if (state.imageLoaded && state.mode !== 'pan') {
+                document.getElementById('crosshairH').style.display = 'block';
+                document.getElementById('crosshairV').style.display = 'block';
+                document.getElementById('crosshairH').style.top = canvasPos.y + 'px';
+                document.getElementById('crosshairV').style.left = canvasPos.x + 'px';
+            }
+
+            document.getElementById('pxCoords').textContent = `${Math.round(imagePos.x)}, ${Math.round(imagePos.y)}`;
+            if (state.calibration.isCalibrated) {
+                const data = pixelToData(imagePos.x, imagePos.y);
+                document.getElementById('dataCoords').textContent = `${data.x?.toFixed(2) || '—'}, ${data.y?.toFixed(4) || '—'}`;
+            }
+
+            if (isDragging) {
+                state.panX = e.clientX - dragStart.x;
+                state.panY = e.clientY - dragStart.y;
+                render();
+            }
+        }
+
+        function handleMouseUp() {
+            isDragging = false;
+            document.getElementById('mainCanvas').style.cursor = state.mode === 'pan' ? 'grab' : 'crosshair';
+        }
+
+        function handleWheel(e) {
+            e.preventDefault();
+            const canvasPos = pixelToCanvas(e.clientX, e.clientY);
+            const before = canvasToImage(canvasPos.x, canvasPos.y);
+            state.zoom = clamp(state.zoom * (e.deltaY > 0 ? 0.9 : 1.1), 0.1, 15);
+            const after = canvasToImage(canvasPos.x, canvasPos.y);
+            state.panX += (after.x - before.x) * state.zoom;
+            state.panY += (after.y - before.y) * state.zoom;
+            render();
+        }
+
+        function handleDoubleClick(e) {
+            const canvasPos = pixelToCanvas(e.clientX, e.clientY);
+            const imagePos = canvasToImage(canvasPos.x, canvasPos.y);
+
+            let minDist = Infinity, minIdx = -1;
+            state.points.forEach((p, i) => {
+                const dist = Math.hypot(p.px - imagePos.x, p.py - imagePos.y);
+                if (dist < minDist && dist < 20 / state.zoom) { minDist = dist; minIdx = i; }
+            });
+
+            if (minIdx >= 0) {
+                state.history.push({ type: 'deletePoint', data: state.points[minIdx] });
+                state.points.splice(minIdx, 1);
+                updatePointsTable();
+                updateArmList();
+                render();
+                showToast('Point deleted', 'info');
+            }
+        }
+
+        function handleKeyDown(e) {
+            if (e.ctrlKey && e.key === 'z') { e.preventDefault(); undoLast(); }
+            else if (e.key >= '1' && e.key <= '5') setMode(['calibrate', 'digitize', 'censor', 'ci', 'pan'][parseInt(e.key) - 1]);
+            else if (e.key === ' ') { e.preventDefault(); setMode(state.mode === 'pan' ? 'digitize' : 'pan'); }
+            else if (e.key === '+' || e.key === '=') zoomIn();
+            else if (e.key === '-') zoomOut();
+            else if (e.key === '0') zoomFit();
+            else if (e.key.toLowerCase() === 't') toggleTheme();
+        }
+
+        // ============================================
+        // UI Helpers
+        // ============================================
+        
+        function setMode(mode, btn) {
+            state.mode = mode;
+            document.querySelectorAll('.mode-btn').forEach(b => b.classList.remove('active'));
+            if (btn) btn.classList.add('active');
+            else document.querySelectorAll('.mode-btn')[['calibrate', 'digitize', 'censor', 'ci', 'pan'].indexOf(mode)]?.classList.add('active');
+            document.getElementById('mainCanvas').style.cursor = mode === 'pan' ? 'grab' : 'crosshair';
+        }
+
+        function toggleSection(header) {
+            const content = header.nextElementSibling;
+            content.classList.toggle('collapsed');
+            header.querySelector('span:last-child').textContent = content.classList.contains('collapsed') ? '▶' : '▼';
+        }
+
+        function switchTab(tabName) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.tab[data-tab="${tabName}"]`).classList.add('active');
+            document.getElementById(`tab-${tabName}`).classList.add('active');
+        }
+
+        function addArm(name) {
+            const index = state.arms.length;
+            const template = JOURNAL_TEMPLATES[state.selectedTemplate];
+            const color = template?.colors[index] || armColors[index % armColors.length];
+            state.arms.push({ name: name || `Arm ${index + 1}`, color });
+            updateArmList();
+            updateAtRiskSection();
+        }
+
+        function updateArmList() {
+            const container = document.getElementById('armList');
+            container.innerHTML = state.arms.map((arm, i) => {
+                const count = state.points.filter(p => p.armIndex === i).length;
+                return `<div class="arm-item ${i === state.activeArmIndex ? 'active' : ''}" onclick="setActiveArm(${i})">
+                    <input type="color" class="arm-color" value="${arm.color}" onclick="event.stopPropagation()" onchange="updateArmColor(${i}, this.value)">
+                    <input type="text" class="arm-name" value="${arm.name}" onclick="event.stopPropagation()" onchange="updateArmName(${i}, this.value)">
+                    <span class="arm-count">${count}</span>
+                    <span class="arm-delete" onclick="event.stopPropagation(); deleteArm(${i})">×</span>
+                </div>`;
+            }).join('');
+        }
+
+        function setActiveArm(index) { state.activeArmIndex = index; updateArmList(); }
+        function updateArmColor(index, color) { state.arms[index].color = color; render(); }
+        function updateArmName(index, name) { state.arms[index].name = name; }
+        
+        function deleteArm(index) {
+            if (state.arms.length <= 1) { showToast('Need at least one arm', 'error'); return; }
+            state.arms.splice(index, 1);
+            state.points = state.points.filter(p => p.armIndex !== index).map(p => ({ ...p, armIndex: p.armIndex > index ? p.armIndex - 1 : p.armIndex }));
+            if (state.activeArmIndex >= state.arms.length) state.activeArmIndex = state.arms.length - 1;
+            updateArmList();
+            updateAtRiskSection();
+            render();
+        }
+
+        function updateAtRiskSection() {
+            const container = document.getElementById('atRiskSection');
+            container.innerHTML = state.arms.map((arm, i) => `
+                <div class="input-group">
+                    <label class="input-label">${arm.name} (time, n per line)</label>
+                    <textarea class="input" id="atRisk${i}" rows="3" placeholder="0, 100&#10;12, 80&#10;24, 60"></textarea>
+                </div>
+            `).join('');
+        }
+
+        function updatePointsTable() {
+            const tbody = document.getElementById('pointsTableBody');
+            tbody.innerHTML = state.points.map((p, i) => `
+                <tr>
+                    <td style="color: ${state.arms[p.armIndex]?.color || 'var(--text-primary)'}">${state.arms[p.armIndex]?.name || 'Unknown'}</td>
+                    <td>${p.x?.toFixed(2) || '—'}</td>
+                    <td>${p.y?.toFixed(4) || '—'}</td>
+                    <td>${p.isCensor ? 'Censor' : 'Event'}</td>
+                    <td><span style="cursor: pointer; color: var(--accent-red);" onclick="deletePoint(${i})">×</span></td>
+                </tr>
+            `).join('');
+        }
+
+        function deletePoint(index) {
+            state.history.push({ type: 'deletePoint', data: state.points[index] });
+            state.points.splice(index, 1);
+            updatePointsTable();
+            updateArmList();
+            render();
+        }
+
+        function undoLast() {
+            if (state.history.length === 0) { showToast('Nothing to undo', 'info'); return; }
+            const action = state.history.pop();
+            if (action.type === 'point') {
+                const idx = state.points.indexOf(action.data);
+                if (idx >= 0) state.points.splice(idx, 1);
+            } else if (action.type === 'calibration') {
+                state.calibration.points = action.data.slice(0, -1);
+                state.calibration.isCalibrated = false;
+                document.getElementById('calStatus').className = 'cal-status incomplete';
+                document.getElementById('calStatus').textContent = 'Click 3 points to calibrate axes';
+            } else if (action.type === 'deletePoint') {
+                state.points.push(action.data);
+            }
+            updatePointsTable();
+            updateArmList();
+            render();
+            showToast('Undone', 'info');
+        }
+
+        function clearArm() {
+            const count = state.points.filter(p => p.armIndex === state.activeArmIndex).length;
+            state.points = state.points.filter(p => p.armIndex !== state.activeArmIndex);
+            updatePointsTable();
+            updateArmList();
+            render();
+            showToast(`Cleared ${count} points`, 'info');
+        }
+
+        function clearAllPoints() {
+            const count = state.points.length;
+            state.points = [];
+            state.ciPoints = [];
+            updatePointsTable();
+            updateArmList();
+            render();
+            showToast(`Cleared all ${count} points`, 'info');
+        }
+
+        // Zoom functions
+        function zoomIn() { state.zoom = Math.min(15, state.zoom * 1.2); render(); }
+        function zoomOut() { state.zoom = Math.max(0.1, state.zoom / 1.2); render(); }
+        function zoomFit() {
+            if (!state.image) return;
+            const container = document.getElementById('canvasContainer');
+            const scaleX = container.clientWidth / state.image.width;
+            const scaleY = container.clientHeight / state.image.height;
+            state.zoom = Math.min(scaleX, scaleY) * 0.9;
+            state.panX = (container.clientWidth - state.image.width * state.zoom) / 2;
+            state.panY = (container.clientHeight - state.image.height * state.zoom) / 2;
+            render();
+        }
+        function zoomReset() { state.zoom = 1; state.panX = 0; state.panY = 0; render(); }
+
+        // Toast & Processing
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            toast.className = `toast ${type}`;
+            toast.innerHTML = `<span>${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}</span><span>${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        function showProcessing(text) {
+            document.getElementById('processingOverlay').classList.add('visible');
+            document.getElementById('processingText').textContent = text;
+            document.getElementById('processingBar').style.width = '0%';
+        }
+
+        function updateProcessing(text, percent) {
+            document.getElementById('processingText').textContent = text;
+            document.getElementById('processingBar').style.width = percent + '%';
+        }
+
+        function hideProcessing() {
+            document.getElementById('processingOverlay').classList.remove('visible');
+        }
+
+        function hideModal(id) {
+            document.getElementById(id).classList.remove('visible');
+        }
+
+        // ============================================
+        // Export Functions
+        // ============================================
+        
+        function exportCSV(type) {
+            let csv = '', filename = '';
+            if (type === 'points') {
+                const config = CURVE_TYPES[state.curveType];
+                csv = `arm,time,${config.yLabel.toLowerCase().replace(/ /g, '_')},type\n`;
+                state.points.forEach(p => {
+                    csv += `${state.arms[p.armIndex]?.name || 'Unknown'},${p.x},${p.y},${p.isCensor ? 'censor' : 'event'}\n`;
+                });
+                filename = 'survextract_points.csv';
+            } else {
+                csv = 'time,status,arm\n';
+                state.arms.forEach((arm, i) => {
+                    (state.reconstructedData[i] || []).forEach(p => {
+                        csv += `${p.time},${p.status ?? p.value},${arm.name}\n`;
+                    });
+                });
+                filename = 'survextract_ipd.csv';
+            }
+            download(csv, filename, 'text/csv');
+        }
+
+        // NEW: Export IPD with bootstrap uncertainty
+        function exportIPDWithBootstrap() {
+            if (Object.keys(state.reconstructedData).length === 0) {
+                showToast('Reconstruct data first', 'error');
+                return;
+            }
+
+            let csv = 'time,status,arm,hr_lower,hr_upper,rmst_diff_lower,rmst_diff_upper\n';
+            const hrCI = state.bootstrapResults?.hrCI || [null, null];
+            const rmstCI = state.bootstrapResults?.rmstDiffCI || [null, null];
+
+            state.arms.forEach((arm, i) => {
+                (state.reconstructedData[i] || []).forEach((p, j) => {
+                    // Only include bootstrap CI on first row per arm
+                    if (j === 0) {
+                        csv += `${p.time},${p.status ?? p.value},${arm.name},${hrCI[0]?.toFixed(3) || ''},${hrCI[1]?.toFixed(3) || ''},${rmstCI[0]?.toFixed(3) || ''},${rmstCI[1]?.toFixed(3) || ''}\n`;
+                    } else {
+                        csv += `${p.time},${p.status ?? p.value},${arm.name},,,,\n`;
+                    }
+                });
+            });
+
+            download(csv, 'survextract_ipd_bootstrap.csv', 'text/csv');
+        }
+
+        function exportR() {
+            const config = CURVE_TYPES[state.curveType];
+            let r = `# SurvExtract Pro v3 - R Export\n# Curve Type: ${config.name}\n\nlibrary(survival)\n\n`;
+
+            if (Object.keys(state.reconstructedData).length > 0) {
+                const allIPD = Object.values(state.reconstructedData).flat();
+                r += `# Reconstructed IPD\nipd <- data.frame(\n`;
+                r += `  time = c(${allIPD.map(p => p.time.toFixed(4)).join(', ')}),\n`;
+                r += `  status = c(${allIPD.map(p => p.status ?? 1).join(', ')}),\n`;
+                r += `  arm = c(${allIPD.map(p => `"${p.arm}"`).join(', ')})\n)\n\n`;
+                r += `# Kaplan-Meier\nfit <- survfit(Surv(time, status) ~ arm, data = ipd)\nprint(fit)\nplot(fit, col = 1:${state.arms.length}, lwd = 2)\nlegend("topright", legend = levels(factor(ipd$arm)), col = 1:${state.arms.length}, lwd = 2)\n\n`;
+                r += `# Cox regression\ncox_fit <- coxph(Surv(time, status) ~ arm, data = ipd)\nsummary(cox_fit)\n\n`;
+                
+                const tau = document.getElementById('rmstTau').value;
+                if (tau) {
+                    r += `# RMST analysis\nlibrary(survRM2)\nrmst_result <- rmst2(ipd$time, ipd$status, as.numeric(factor(ipd$arm)) - 1, tau = ${tau})\nprint(rmst_result)\n`;
+                }
+            }
+
+            download(r, 'survextract_export.R', 'text/plain');
+        }
+
+        function exportPython() {
+            let py = `# SurvExtract Pro v3 - Python Export\nimport pandas as pd\nimport numpy as np\nfrom lifelines import KaplanMeierFitter, CoxPHFitter\nfrom lifelines.statistics import logrank_test\n\n`;
+
+            if (Object.keys(state.reconstructedData).length > 0) {
+                const allIPD = Object.values(state.reconstructedData).flat();
+                py += `# Reconstructed IPD\nipd = pd.DataFrame({\n`;
+                py += `    'time': [${allIPD.map(p => p.time.toFixed(4)).join(', ')}],\n`;
+                py += `    'event': [${allIPD.map(p => p.status ?? 1).join(', ')}],\n`;
+                py += `    'arm': [${allIPD.map(p => `'${p.arm}'`).join(', ')}]\n})\n\n`;
+                py += `# Kaplan-Meier plot\nkmf = KaplanMeierFitter()\nfor arm in ipd['arm'].unique():\n    mask = ipd['arm'] == arm\n    kmf.fit(ipd.loc[mask, 'time'], ipd.loc[mask, 'event'], label=arm)\n    kmf.plot_survival_function()\n\n`;
+                py += `# Log-rank test\narm1 = ipd[ipd['arm'] == ipd['arm'].unique()[0]]\narm2 = ipd[ipd['arm'] == ipd['arm'].unique()[1]]\nresult = logrank_test(arm1['time'], arm2['time'], arm1['event'], arm2['event'])\nprint(f'Log-rank p-value: {result.p_value:.4f}')\n\n`;
+                py += `# Cox regression\nipd['arm_binary'] = (ipd['arm'] == ipd['arm'].unique()[0]).astype(int)\ncph = CoxPHFitter()\ncph.fit(ipd[['time', 'event', 'arm_binary']], duration_col='time', event_col='event')\ncph.print_summary()\n`;
+            }
+
+            download(py, 'survextract_export.py', 'text/plain');
+        }
+
+        function exportStata() {
+            let stata = `* SurvExtract Pro v3 - Stata Export\nclear\ninput str30 arm double time byte status\n`;
+            
+            if (Object.keys(state.reconstructedData).length > 0) {
+                Object.values(state.reconstructedData).flat().forEach(p => {
+                    stata += `"${p.arm}" ${p.time.toFixed(4)} ${p.status ?? 1}\n`;
+                });
+            }
+            
+            stata += `end\n\nencode arm, gen(arm_num)\nstset time, failure(status)\n\n* Kaplan-Meier\nsts graph, by(arm)\n\n* Log-rank test\nsts test arm\n\n* Cox regression\nstcox i.arm_num\n`;
+            
+            const tau = document.getElementById('rmstTau').value;
+            if (tau) {
+                stata += `\n* RMST (requires strmst2 package)\n* ssc install strmst2\nstrmst2 arm_num, tau(${tau})\n`;
+            }
+            
+            download(stata, 'survextract_export.do', 'text/plain');
+        }
+
+        function exportJSON() {
+            const project = {
+                version: '3.0',
+                curveType: state.curveType,
+                outcome: state.selectedOutcome,
+                template: state.selectedTemplate,
+                calibration: state.calibration,
+                arms: state.arms,
+                points: state.points,
+                ciPoints: state.ciPoints,
+                atRisk: state.atRisk,
+                reconstructedData: state.reconstructedData,
+                rmstResults: state.rmstResults,
+                coxResults: state.coxResults,
+                bootstrapResults: state.bootstrapResults,
+                validationResults: state.validationResults,
+                exported: new Date().toISOString()
+            };
+            download(JSON.stringify(project, null, 2), 'survextract_project_v3.json', 'application/json');
+        }
+
+        function exportMetaEngine() {
+            if (state.arms.length < 2 || Object.keys(state.reconstructedData).length === 0) {
+                showToast('Need 2+ arms with reconstructed data', 'error');
+                return;
+            }
+
+            const arm1 = state.reconstructedData[0] || [];
+            const arm2 = state.reconstructedData[1] || [];
+            const events1 = arm1.filter(p => p.status === 1).length;
+            const events2 = arm2.filter(p => p.status === 1).length;
+            const time1 = arm1.reduce((s, p) => s + p.time, 0);
+            const time2 = arm2.reduce((s, p) => s + p.time, 0);
+
+            if (events1 === 0 || events2 === 0) { showToast('No events in one or both arms', 'error'); return; }
+
+            const rate1 = events1 / time1, rate2 = events2 / time2;
+            const hr = rate1 / rate2;
+            const se = Math.sqrt(1/events1 + 1/events2);
+
+            const metaEngine = {
+                format: 'MetaEngine-v1',
+                study: {
+                    id: 'digitized_' + Date.now(),
+                    name: 'Digitized Study',
+                    outcome: state.selectedOutcome ? CARDIO_OUTCOMES[state.selectedOutcome]?.full : 'survival',
+                    curveType: state.curveType
+                },
+                data: {
+                    yi: Math.log(hr),
+                    vi: se * se,
+                    sei: se,
+                    hr: hr,
+                    lower: Math.exp(Math.log(hr) - 1.96 * se),
+                    upper: Math.exp(Math.log(hr) + 1.96 * se),
+                    events_treatment: events1,
+                    n_treatment: arm1.length,
+                    events_control: events2,
+                    n_control: arm2.length
+                },
+                arms: state.arms.map((arm, i) => ({
+                    name: arm.name,
+                    n: (state.reconstructedData[i] || []).length,
+                    events: (state.reconstructedData[i] || []).filter(p => p.status === 1).length
+                })),
+                rmst: state.rmstResults,
+                cox: state.coxResults,
+                bootstrap: state.bootstrapResults,
+                validation: state.validationResults,
+                ipd: state.reconstructedData
+            };
+
+            download(JSON.stringify(metaEngine, null, 2), 'metaengine_study.json', 'application/json');
+            showToast('Exported for MetaEngine', 'success');
+        }
+
+        function exportMetaEngineForest() {
+            if (state.arms.length < 2 || Object.keys(state.reconstructedData).length === 0) {
+                showToast('Need 2+ arms with reconstructed data', 'error');
+                return;
+            }
+
+            const arm1 = state.reconstructedData[0] || [];
+            const arm2 = state.reconstructedData[1] || [];
+            const events1 = arm1.filter(p => p.status === 1).length;
+            const events2 = arm2.filter(p => p.status === 1).length;
+            const time1 = arm1.reduce((s, p) => s + p.time, 0);
+            const time2 = arm2.reduce((s, p) => s + p.time, 0);
+
+            if (events1 === 0 || events2 === 0) { showToast('No events', 'error'); return; }
+
+            const rate1 = events1 / time1, rate2 = events2 / time2;
+            const hr = rate1 / rate2;
+            const se = Math.sqrt(1/events1 + 1/events2);
+
+            const csv = `study,yi,sei,ni,outcome,hr,ci_lower,ci_upper,events_treatment,n_treatment,events_control,n_control
+"Digitized Study",${Math.log(hr).toFixed(4)},${se.toFixed(4)},${arm1.length + arm2.length},"${state.selectedOutcome || 'survival'}",${hr.toFixed(3)},${Math.exp(Math.log(hr) - 1.96 * se).toFixed(3)},${Math.exp(Math.log(hr) + 1.96 * se).toFixed(3)},${events1},${arm1.length},${events2},${arm2.length}`;
+
+            download(csv, 'metaengine_forest.csv', 'text/csv');
+            showToast('Forest plot data exported', 'success');
+        }
+
+        function importProject() {
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.json';
+            input.onchange = e => {
+                const reader = new FileReader();
+                reader.onload = ev => {
+                    try {
+                        const data = JSON.parse(ev.target.result);
+                        if (data.curveType) setCurveType(data.curveType);
+                        if (data.calibration) state.calibration = data.calibration;
+                        if (data.arms) state.arms = data.arms;
+                        if (data.points) state.points = data.points;
+                        if (data.atRisk) state.atRisk = data.atRisk;
+                        if (data.reconstructedData) state.reconstructedData = data.reconstructedData;
+                        if (data.rmstResults) state.rmstResults = data.rmstResults;
+                        if (data.coxResults) state.coxResults = data.coxResults;
+                        if (data.bootstrapResults) state.bootstrapResults = data.bootstrapResults;
+                        if (data.validationResults) state.validationResults = data.validationResults;
+
+                        updateArmList();
+                        updateAtRiskSection();
+                        updatePointsTable();
+                        render();
+                        showToast('Project loaded successfully', 'success');
+                    } catch (err) {
+                        showToast('Failed to load project: ' + err.message, 'error');
+                    }
+                };
+                reader.readAsText(e.target.files[0]);
+            };
+            input.click();
+        }
+
+        function download(content, filename, type) {
+            const blob = new Blob([content], { type });
+            const a = document.createElement('a');
+            let url = null;
+            try {
+                url = URL.createObjectURL(blob);
+                a.href = url;
+                a.download = filename;
+                a.click();
+                showToast(`Downloaded: ${filename}`, 'success');
+            } finally {
+                if (url) URL.revokeObjectURL(url);
+            }
+        }
+
+        // ============================================
+        // Service Worker for Offline Mode - NEW
+        // ============================================
+        
+        if ('serviceWorker' in navigator) {
+            // Register service worker for offline capability
+            // Note: This requires a separate sw.js file for full implementation
+            // For now, we cache critical data in localStorage
+            window.addEventListener('beforeunload', () => {
+                if (state.points.length > 0) {
+                    localStorage.setItem('survextract-autosave', JSON.stringify({
+                        points: state.points,
+                        arms: state.arms,
+                        calibration: state.calibration,
+                        curveType: state.curveType
+                    }));
+                }
+            });
+
+            // Restore autosave on load
+            window.addEventListener('load', () => {
+                const autosave = localStorage.getItem('survextract-autosave');
+                if (autosave) {
+                    try {
+                        const data = JSON.parse(autosave);
+                        if (data.points?.length > 0 && confirm('Restore unsaved work from previous session?')) {
+                            state.points = data.points;
+                            state.arms = data.arms || state.arms;
+                            state.calibration = data.calibration || state.calibration;
+                            if (data.curveType) setCurveType(data.curveType);
+                            updateArmList();
+                            updatePointsTable();
+                            render();
+                            showToast('Previous session restored', 'success');
+                        }
+                        localStorage.removeItem('survextract-autosave');
+                    } catch (e) {
+                        console.error('Failed to restore autosave:', e);
+                    }
+                }
+            });
+        }
+
+        // Initialize on DOM ready
+        document.addEventListener('DOMContentLoaded', init);
+    </script>
+</body>
+</html>

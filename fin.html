@@ -1,0 +1,745 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FineFlow | Finerenone Evidence Engine v2.4</title>
+    
+    <!-- Libraries -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://unpkg.com/vis-network/standalone/umd/vis-network.min.js"></script>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.3.0/math.min.js"></script>
+
+    <style>
+        body { background-color: #0f172a; color: #cbd5e1; font-family: 'Inter', system-ui, sans-serif; }
+        .glass { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); }
+        .glass-panel { background: rgba(30, 41, 59, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(255,255,255,0.1); border-radius: 0.75rem; border: 1px solid #334155; }
+        .mono-box { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+        
+        /* Loader */
+        .loader { border: 2px solid rgba(255,255,255,0.1); border-top: 2px solid #d946ef; border-radius: 50%; width: 14px; height: 14px; animation: spin 0.8s linear infinite; display: inline-block; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        /* Tab Active State */
+        .tab-active { border-bottom: 2px solid #d946ef; color: #d946ef; }
+        
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: #0f172a; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 3px; }
+        
+        /* Legend Chips */
+        .legend-chip { cursor: pointer; padding: 2px 6px; border-radius: 9999px; border-width: 1px; border-style: solid; border-color: transparent; font-size: 10px; transition: all 0.2s; background-color: rgba(15, 23, 42, 0.7); }
+        .legend-chip:hover { background-color: rgba(255,255,255,0.1); }
+        .legend-chip-muted { opacity: 0.35; border-color: rgba(148, 163, 184, 0.7); text-decoration: line-through; }
+    </style>
+</head>
+<body class="h-screen flex flex-col overflow-hidden">
+
+    <!-- HEADER -->
+    <nav class="h-14 border-b border-slate-700 flex items-center px-6 justify-between bg-slate-900 shrink-0 z-20">
+        <div class="flex items-center gap-3">
+            <div class="bg-gradient-to-br from-fuchsia-600 to-purple-600 w-8 h-8 rounded flex items-center justify-center text-white font-bold text-xs shadow-lg">FF</div>
+            <div>
+                <span class="font-bold text-lg tracking-tight text-white block leading-tight">FineFlow<span class="text-fuchsia-400"></span></span>
+                <span class="text-[10px] text-slate-500 uppercase tracking-wider block leading-tight">v2.4: Validated Calibration</span>
+            </div>
+        </div>
+        <div class="flex gap-4 text-xs font-mono text-slate-400 items-center">
+            <div id="trial-counter" class="bg-slate-800 px-3 py-1 rounded-full border border-slate-700 transition-all hover:border-fuchsia-500 cursor-default">0 / 0 Trials</div>
+            <button onclick="window.ExportEngine.downloadCSV()" class="hover:text-white transition flex items-center gap-2"><i class="fa-solid fa-file-csv"></i> Export</button>
+        </div>
+    </nav>
+
+    <!-- MAIN LAYOUT -->
+    <div class="flex flex-1 min-h-0 relative">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-72 border-r border-slate-700 flex flex-col bg-slate-900/95 backdrop-blur z-10">
+            <!-- Pipeline Controls -->
+            <div class="p-4 border-b border-slate-700">
+                <label class="text-[10px] uppercase font-bold text-slate-500 tracking-wider mb-2 block">Data Pipeline</label>
+                <button id="btn-fetch" onclick="window.App.runPipeline()" class="w-full bg-gradient-to-r from-fuchsia-600 to-purple-600 hover:from-fuchsia-500 hover:to-purple-500 text-white py-2 rounded shadow-lg text-xs font-bold transition flex items-center justify-center gap-2">
+                    <i class="fa-solid fa-database"></i> <span>Fetch Universe (Live)</span>
+                </button>
+                <div class="mt-3 grid grid-cols-2 gap-2">
+                    <button onclick="window.App.injectRegistry()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1 rounded text-[10px] border border-slate-600 transition">
+                        <i class="fa-solid fa-upload"></i> Upload CSV
+                    </button>
+                    <button onclick="window.App.injectDemo()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 py-1 rounded text-[10px] border border-slate-600 transition">
+                        <i class="fa-solid fa-play"></i> Load FIDELIO+
+                    </button>
+                </div>
+            </div>
+
+            <!-- Stats & Logs -->
+            <div class="flex-1 flex flex-col min-h-0 bg-black/20">
+                <div class="p-2 border-b border-slate-800 flex justify-between bg-slate-900/50">
+                    <span class="text-[10px] font-bold text-slate-500 pl-2">EVENT LOG</span>
+                    <button onclick="window.Logger.clear()" class="text-[9px] text-slate-600 hover:text-slate-400 pr-2">CLR</button>
+                </div>
+                <div id="console-output" class="flex-1 p-3 font-mono text-[10px] text-slate-300 overflow-y-auto space-y-1"></div>
+            </div>
+        </aside>
+
+        <!-- DASHBOARD CONTENT -->
+        <main class="flex-1 flex flex-col min-w-0 bg-slate-900 relative">
+            
+            <!-- TABS -->
+            <div class="h-10 border-b border-slate-700 flex px-4 bg-slate-800/50 gap-4">
+                <button onclick="window.UI.setTab('core')" class="tab-btn tab-active h-full px-2 text-xs font-bold flex items-center gap-2 border-b-2 border-transparent transition" data-tab="core">
+                    <i class="fa-solid fa-share-nodes"></i> NMA & CNMA
+                </button>
+                <button onclick="window.UI.setTab('geometry')" class="tab-btn h-full px-2 text-xs font-bold text-slate-400 hover:text-white flex items-center gap-2 border-b-2 border-transparent transition" data-tab="geometry">
+                    <i class="fa-solid fa-globe"></i> Patient Geometry
+                </button>
+                <button onclick="window.UI.setTab('world')" class="tab-btn h-full px-2 text-xs font-bold text-slate-400 hover:text-white flex items-center gap-2 border-b-2 border-transparent transition" data-tab="world">
+                    <i class="fa-solid fa-city"></i> CKD/HF Simulation
+                </button>
+            </div>
+
+            <!-- VIEW: CORE NMA -->
+            <div id="view-core" class="view-panel flex-1 p-6 overflow-y-auto grid grid-cols-12 gap-6">
+                <!-- Toolbar -->
+                <div class="col-span-12 flex justify-between items-center bg-slate-800/50 p-2 rounded border border-slate-700">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-bold text-slate-400 px-2">OUTCOME:</span>
+                        <select id="outcome-select" onchange="window.App.updateUI()" class="bg-slate-900 text-xs text-white border border-slate-600 rounded px-2 py-1 outline-none">
+                            <option value="composite">CV Death / HHF / MACE (Composite)</option>
+                            <option value="renal">Renal Composite</option>
+                            <option value="mortality">All-Cause Mortality</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Network Graph -->
+                <div class="col-span-8 glass-panel h-96 relative">
+                    <div id="network-container" class="w-full h-full"></div>
+                    <div class="absolute top-2 left-2 text-[10px] font-bold text-slate-500 bg-slate-900/80 px-2 py-1 rounded">EVIDENCE UNIVERSE</div>
+                </div>
+                <!-- Forest Plot -->
+                <div class="col-span-4 glass-panel h-96 flex flex-col">
+                    <!-- Header -->
+                    <div class="p-3 border-b border-slate-700 text-xs font-bold text-slate-400 flex justify-between">
+                        <span>CLASS EFFECTS (Analytic)</span>
+                        <span id="tau-display" class="text-fuchsia-400 font-mono text-[10px]">τ²: --</span>
+                    </div>
+                    <!-- View toggle + legend -->
+                    <div class="px-3 py-1 border-b border-slate-800 flex items-center justify-between gap-2 text-[10px]">
+                        <div class="flex items-center gap-1">
+                            <span class="text-slate-500">View:</span>
+                            <select id="forest-mode" onchange="window.App.renderForestPlot()" class="bg-slate-900 text-[10px] text-white border border-slate-600 rounded px-1 py-0.5 outline-none">
+                                <option value="components">By Class</option>
+                                <option value="macro">Steroidal vs Non-Steroidal</option>
+                            </select>
+                        </div>
+                        <div id="component-legend" class="flex-1 text-right text-[9px] text-slate-400 overflow-hidden whitespace-nowrap"></div>
+                    </div>
+                    <!-- Forest plot canvas -->
+                    <div id="forest-plot" class="flex-1 w-full"></div>
+                </div>
+                <!-- Bias Diagnostics -->
+                <div class="col-span-12 glass-panel p-4 h-64 flex flex-col">
+                    <div class="text-xs font-bold text-slate-400 mb-2 flex justify-between">
+                        <span>PUBLICATION BIAS (Egger's Test)</span>
+                        <span id="egger-p" class="font-mono text-xs">P: --</span>
+                    </div>
+                    <div id="funnel-plot" class="w-full flex-1"></div>
+                </div>
+            </div>
+
+            <!-- VIEW: GEOMETRY -->
+            <div id="view-geometry" class="view-panel hidden flex-1 p-6 overflow-y-auto grid grid-cols-12 gap-6">
+                <div class="col-span-8 glass-panel h-[500px] relative group">
+                    <div id="geometry-plot" class="w-full h-full"></div>
+                    <div class="absolute top-2 left-2 text-[10px] font-bold text-slate-500 bg-slate-900/80 px-2 py-1 rounded">PATIENT POPULATION SPACE (PCA)</div>
+                </div>
+                <div class="col-span-4 glass-panel p-4 space-y-4 flex flex-col h-[500px]">
+                    <div class="flex justify-between items-center">
+                        <h3 class="text-xs font-bold text-slate-300">TARGET POPULATION</h3>
+                        <select id="target-profile-select" onchange="window.App.updateGeometry()" class="bg-slate-800 text-[10px] text-white border border-slate-600 rounded px-1 py-0.5 outline-none">
+                            <option value="dkd">Classic DKD (FIDELIO-like)</option>
+                            <option value="hfpef">HFmrEF/HFpEF (FINEARTS-like)</option>
+                            <option value="stage4">Advanced CKD (Stage 4)</option>
+                        </select>
+                    </div>
+                    <div class="bg-slate-800/50 p-3 rounded border border-slate-700">
+                        <div class="text-[10px] text-slate-500 uppercase mb-2">Target Profile</div>
+                        <div class="flex justify-between text-xs text-white mb-1"><span>Age</span><span id="target-age-disp">--</span></div>
+                        <div class="flex justify-between text-xs text-white mb-1"><span>eGFR</span><span id="target-ef-disp">--</span></div>
+                        <div class="flex justify-between text-xs text-white"><span>Year</span><span>2025</span></div>
+                    </div>
+                    <div class="text-[10px] font-bold text-slate-500 uppercase mt-2">Distance (Weighted L1)</div>
+                    <div id="transport-list" class="space-y-2 text-[10px] overflow-y-auto flex-1 pr-2"></div>
+                </div>
+            </div>
+
+            <!-- VIEW: WORLD -->
+            <div id="view-world" class="view-panel hidden flex-1 p-6 overflow-y-auto flex flex-col gap-6">
+                <div class="glass-panel p-4 flex justify-between items-center">
+                    <div class="flex gap-4 items-center">
+                        <span class="text-xs font-bold text-slate-400">STRATEGY:</span>
+                        <select id="policy-select" class="bg-slate-800 text-xs text-white border border-slate-600 rounded px-2 py-1">
+                            <option value="sq">Status Quo (RASi only)</option>
+                            <option value="finerenone">Universal Finerenone</option>
+                            <option value="personalized">Risk-Based Allocation</option>
+                        </select>
+                    </div>
+                    <button onclick="window.Simulation.run()" class="bg-fuchsia-600 hover:bg-fuchsia-500 text-white px-4 py-1 rounded text-xs font-bold shadow flex items-center gap-2">
+                        <i class="fa-solid fa-play"></i> <span>Run 10-Year CKD/HF Sim</span>
+                    </button>
+                </div>
+                <div class="grid grid-cols-12 gap-6 flex-1">
+                    <div class="col-span-8 glass-panel p-4">
+                        <div class="text-xs font-bold text-slate-400 mb-2 flex justify-between">
+                            <span>COHORT STATES (Stable / ESRD / Dead)</span>
+                        </div>
+                        <div id="sim-plot-states" class="w-full h-72"></div>
+                    </div>
+                    <div class="col-span-4 glass-panel p-4 flex flex-col">
+                        <div class="text-xs font-bold text-slate-400 mb-2">COST EFFECTIVENESS PLANE</div>
+                        <div id="sim-plot-cost" class="w-full flex-1"></div>
+                        <div class="mt-2 pt-2 border-t border-slate-700 text-[10px] font-mono text-center" id="icer-display">ICER: --</div>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- LOGIC -->
+    <script>
+        const math = window.math;
+
+        // --- 1. UTILS & LOGGING ---
+        window.Logger = {
+            log: (msg, type='info') => {
+                const el = document.getElementById('console-output');
+                if(!el) return;
+                const time = new Date().toLocaleTimeString().split(' ')[0];
+                const color = type==='error'?'text-red-400':(type==='success'?'text-fuchsia-400':'text-slate-400');
+                el.innerHTML += `<div class="mb-1 border-b border-slate-800/50 pb-1"><span class="opacity-40 font-mono mr-2">[${time}]</span><span class="${color}">${msg}</span></div>`;
+                el.scrollTop = el.scrollHeight;
+            },
+            clear: () => { const el = document.getElementById('console-output'); if(el) el.innerHTML = ''; }
+        };
+
+        window.Utils = {
+            mean: (arr) => (!Array.isArray(arr) || arr.length === 0) ? 0 : arr.reduce((a, b) => a + b, 0) / arr.length,
+            sum: (arr) => (!Array.isArray(arr) || arr.length === 0) ? 0 : arr.reduce((a, b) => a + b, 0),
+            variance: (arr) => {
+                if (!Array.isArray(arr) || arr.length < 2) return 0;
+                const m = window.Utils.mean(arr);
+                return window.Utils.mean(arr.map(x => (x - m) ** 2));
+            },
+            ciToSe: (lower, upper) => (Math.log(upper) - Math.log(lower)) / 3.92,
+            pValueT: (t, df) => 2 * (1.0 - math.erf(Math.abs(t) / Math.sqrt(2))),
+            randn: () => {
+                let u = 0, v = 0;
+                while (u === 0) u = Math.random();
+                while (v === 0) v = Math.random();
+                return Math.sqrt(-2 * Math.log(u)) * Math.cos(2 * Math.PI * v);
+            }
+        };
+
+        // --- 2. CONFIG & STYLES ---
+        window.MOLECULE_STYLES = {
+            'Finerenone': { color: '#d946ef', icon: '💎' },
+            'Steroidal MRA': { color: '#f59e0b', icon: '💊' },
+            'SGLT2i': { color: '#10b981', icon: '🌿' },
+            'RASi': { color: '#3b82f6', icon: '🧬' },
+            'Other': { color: '#64748b', icon: '⚪' }
+        };
+
+        window.MOLECULE_TO_MACRO = { 'Finerenone': 'Non-steroidal MRA', 'Steroidal MRA': 'Steroidal MRA', 'SGLT2i': 'Background Tx', 'RASi': 'Background Tx' };
+        window.MACRO_STYLES = { 'Non-steroidal MRA': {color: '#d946ef'}, 'Steroidal MRA': {color: '#f59e0b'}, 'Background Tx': {color: '#94a3b8'} };
+
+        // --- 3. DATA LAYER ---
+        const TRIAL_REGISTRY = {
+            'NCT02540993': { name: 'FIDELIO-DKD', n: 5734, molecule: 'Finerenone', outcomes: [{id:'renal', hr:0.82, lower:0.73, upper:0.93}, {id:'composite', hr:0.86, lower:0.75, upper:0.99}], features: [66, 0.30, 44, 2020] },
+            'NCT02545049': { name: 'FIGARO-DKD', n: 7437, molecule: 'Finerenone', outcomes: [{id:'composite', hr:0.87, lower:0.76, upper:0.98}], features: [64, 0.31, 68, 2021] },
+            'NCT04435626': { name: 'FINEARTS-HF', n: 6001, molecule: 'Finerenone', outcomes: [{id:'composite', hr:0.84, lower:0.74, upper:0.95}], features: [72, 0.45, 53, 2024] },
+            'NCT01372884': { name: 'TOPCAT', n: 3445, molecule: 'Steroidal MRA', outcomes: [{id:'composite', hr:0.89, lower:0.77, upper:1.04}], features: [69, 0.52, 58, 2014] },
+            'NCT00011947': { name: 'RALES', n: 1663, molecule: 'Steroidal MRA', outcomes: [{id:'mortality', hr:0.70, lower:0.60, upper:0.82}], features: [65, 0.27, 25, 1999] },
+            'NCT03036124': { name: 'DAPA-CKD', n: 4304, molecule: 'SGLT2i', outcomes: [{id:'renal', hr:0.61, lower:0.51, upper:0.72}], features: [62, 0.33, 43, 2020] }
+        };
+
+        window.CtgovClient = class CtgovClient {
+            constructor() {
+                // Keep the broad query to find "Universe", but we will force-inject core trials
+                this.query = "?query.term=Finerenone%20OR%20Mineralocorticoid%20OR%20Kidney%20Disease&filter.overallStatus=COMPLETED&aggFilters=results:with&pageSize=100";
+            }
+            async fetchBatch(token=null) {
+                let url = "https://clinicaltrials.gov/api/v2/studies" + this.query;
+                if(token) url += `&pageToken=${token}`;
+                const res = await fetch(url);
+                if(!res.ok) throw new Error("API Error");
+                return await res.json();
+            }
+        };
+
+        window.TrialParser = class TrialParser {
+            classifyMolecule(text) {
+                const t = (text || '').toLowerCase();
+                const hasAny = (...patterns) => patterns.some(p => t.includes(p));
+                if (hasAny('finerenone', 'kerendia', 'bay 94-8862')) return 'Finerenone';
+                if (hasAny('spironolactone', 'eplerenone', 'aldactone')) return 'Steroidal MRA';
+                if (hasAny('sglt2', 'dapagliflozin', 'empagliflozin')) return 'SGLT2i';
+                if (hasAny('ace inhibitor', 'arb ', 'ramipril')) return 'RASi';
+                return 'Other';
+            }
+
+            parse(study) {
+                try {
+                    const p = study.protocolSection;
+                    const r = study.resultsSection;
+                    if(!p) return null;
+                    const id = p.identificationModule.nctId;
+                    
+                    // Priority check: Use Registry data if available
+                    if(TRIAL_REGISTRY[id]) {
+                         const reg = TRIAL_REGISTRY[id];
+                         reg.outcomes.forEach(o => o.se = window.Utils.ciToSe(o.lower, o.upper));
+                         return { id, name: reg.name, n: reg.n, molecule: reg.molecule, outcomes: reg.outcomes, features: reg.features };
+                    }
+                    
+                    const title = p.identificationModule.briefTitle;
+                    const n = parseInt(p.designModule?.enrollmentInfo?.count || 0);
+                    let year = 2020;
+                    if (p.statusModule?.startDateStruct?.date) year = parseInt(p.statusModule.startDateStruct.date.split('-')[0]);
+
+                    const armsText = (p.armsInterventionsModule?.arms || []).map(a => `${a.name||''} ${a.description||''}`).join(' ');
+                    const classText = `${title} ${armsText}`.trim();
+                    const molecule = this.classifyMolecule(classText);
+
+                    let egfr = 45; 
+                    let age = 65, sex = 0.3;
+
+                    if (r) {
+                         const measures = r.baselineCharacteristicsModule?.measures || [];
+                         measures.forEach(m => {
+                            const t = (m.title||"").toLowerCase();
+                            if(t.includes('age') && m.paramType==='MEAN') age = parseFloat(m.classes?.[0]?.categories?.[0]?.measurements?.[0]?.value) || 65;
+                            if(t.includes('GFR') || t.includes('filtration')) egfr = parseFloat(m.classes?.[0]?.categories?.[0]?.measurements?.[0]?.value) || 45;
+                         });
+                    }
+
+                    const outcomes = [];
+                    (r?.outcomeMeasuresModule?.outcomeMeasures || []).forEach(m => {
+                        const t = (m.title||"").toLowerCase();
+                        let type = 'other';
+                        // Broader matching for real-world data messiness
+                        if(t.includes('kidney') || t.includes('renal') || t.includes('egfr') || t.includes('dialysis') || t.includes('esrd')) type = 'renal';
+                        else if(t.includes('composite') && (t.includes('death') || t.includes('cardiovascular'))) type = 'composite';
+                        else if(t.includes('death') || t.includes('mortality')) type = 'mortality';
+                        else if(t.includes('hospitalization') || t.includes('failure')) type = 'hfhosp';
+
+                        const cox = m.analyses?.find(a => {
+                            const pt = (a.paramType||"").toLowerCase();
+                            return pt.includes('hazard ratio') || pt.includes('risk ratio');
+                        });
+                        
+                        if(cox && cox.paramValue && cox.ciLowerLimit && cox.ciUpperLimit) {
+                            outcomes.push({
+                                id: type, name: m.title,
+                                hr: parseFloat(cox.paramValue),
+                                lower: parseFloat(cox.ciLowerLimit),
+                                upper: parseFloat(cox.ciUpperLimit),
+                                se: window.Utils.ciToSe(parseFloat(cox.ciLowerLimit), parseFloat(cox.ciUpperLimit))
+                            });
+                        }
+                    });
+
+                    return {
+                        id, name: title.substring(0, 24) + '...',
+                        n, molecule, outcomes, features: [age, sex, egfr, year]
+                    };
+                } catch(e) { return null; }
+            }
+        };
+
+        // --- 4. STATS ENGINE ---
+        window.StatsEngine = {
+            solveWLS: (X, Y, W_diag) => {
+                try {
+                    const mathX = math.matrix(X); const mathY = math.matrix(Y.map(y=>[y])); const mathW = math.diag(W_diag);
+                    const XtW = math.multiply(math.transpose(mathX), mathW);
+                    const XtWX = math.multiply(XtW, mathX);
+                    const ridge = math.identity(XtWX.size()[0]).map(v => v * 0.0001);
+                    const inv = math.inv(math.add(XtWX, ridge));
+                    const Beta = math.multiply(math.multiply(inv, XtW), mathY);
+                    const variances = math.diag(inv).toArray();
+                    return { beta: Beta.toArray().flat(), variances };
+                } catch(e) { return null; }
+            },
+            runCNMA: (trials, outcomeType) => {
+                const valid = trials.filter(t => t.outcomes.some(o => o.id === outcomeType || o.id === 'composite'));
+                if(valid.length < 2) return null;
+                const molecules = [...new Set(valid.map(t => t.molecule))].filter(c => c!=='Other').sort();
+                const K = molecules.length;
+                const X = [], Y = [], V = [];
+                valid.forEach(t => {
+                    const outcome = t.outcomes.find(o => o.id === outcomeType || o.id === 'composite');
+                    if(outcome && t.molecule !== 'Other') {
+                        const row = new Array(K).fill(0); row[molecules.indexOf(t.molecule)] = 1;
+                        X.push(row); Y.push(Math.log(outcome.hr)); V.push(outcome.se ** 2);
+                    }
+                });
+                if(X.length === 0) return null;
+                const res = window.StatsEngine.solveWLS(X, Y, V.map(v => 1/v));
+                if(!res) return null;
+                return molecules.map((c, i) => ({
+                    molecule: c, hr: Math.exp(res.beta[i]),
+                    lower: Math.exp(res.beta[i] - 1.96*Math.sqrt(res.variances[i])),
+                    upper: Math.exp(res.beta[i] + 1.96*Math.sqrt(res.variances[i])),
+                    tau: 0.0
+                }));
+            },
+            runEggers: (trials, outcomeType) => {
+                const valid = trials.filter(t => t.outcomes.some(o => o.id === outcomeType || o.id === 'composite'));
+                // FIXED: Lower threshold to allow plot with smaller datasets
+                if(valid.length < 3) return null;
+                const x = [], y = []; 
+                valid.forEach(t => {
+                    const o = t.outcomes.find(o => o.id === outcomeType || o.id === 'composite');
+                    x.push(o.se); y.push(Math.log(o.hr) / o.se);
+                });
+                const mx = window.Utils.mean(x), my = window.Utils.mean(y);
+                const n = x.length;
+                const num = window.Utils.sum(x.map((xi,i) => (xi-mx)*(y[i]-my)));
+                const den = window.Utils.sum(x.map(xi => (xi-mx)**2));
+                const slope = num/den;
+                const intercept = my - slope*mx;
+                const residuals = y.map((yi, i) => yi - (intercept + slope*x[i]));
+                const rss = window.Utils.sum(residuals.map(r => r**2));
+                const sigma2 = rss / (n - 2);
+                const seIntercept = Math.sqrt(sigma2 * (1/n + (mx**2)/den));
+                const tStat = intercept / seIntercept;
+                const pValue = window.Utils.pValueT(tStat, n-2);
+                return { intercept, pValue, tStat };
+            }
+        };
+
+        // --- 5. WORLD ENGINE & POLICY CLASSES ---
+        // DEFINED GLOBALLY TO FIX ReferenceError
+        window.HFBin = class HFBin {
+            constructor(id, features, size) {
+                this.id = id; this.features = features; this.size = Math.min(size || 0, 15000);
+                this.state = { stable: this.size, esrd: 0, dead: 0 }; 
+            }
+        };
+        
+        window.Policy = class Policy {
+            constructor(name, rules) { this.name = name; this.rules = rules; }
+            getTreatment(bin) { for (let rule of this.rules) { const tx = rule(bin); if (tx) return tx; } return 'Placebo'; }
+        };
+
+        window.MuToTheta = {
+            predict: (bin, treatment, cnmaResults) => {
+                if (treatment === 'Placebo') return 1.0;
+                const effect = cnmaResults.find(r => r.molecule === treatment); 
+                let hr = effect ? effect.hr : 1.0;
+                // Interaction: eGFR < 60 amplifies benefit of Finerenone
+                if(treatment === 'Finerenone' && bin.features[2] < 60) hr *= 0.95;
+                return hr;
+            }
+        };
+
+        window.WorldEngine = {
+             params: { timeHorizon: 10, dt: 0.25, baseMortality: 0.06, baseESRD: 0.04, costs: { drug: 600, esrd: 80000 } },
+             run: (policy, populationBins, cnmaResults) => {
+                const history = [];
+                let currentTime = 0;
+                // Use the globally defined HFBin class
+                const activeBins = populationBins.map(b => new window.HFBin(b.id, b.features, b.size));
+                let cumQALY = 0, cumCost = 0;
+
+                while (currentTime < window.WorldEngine.params.timeHorizon) {
+                    let stepQALY = 0, stepCost = 0;
+                    activeBins.forEach(bin => {
+                        const tx = policy.getTreatment(bin);
+                        const hr = window.MuToTheta.predict(bin, tx, cnmaResults);
+                        
+                        // Rates
+                        let pDie = 1 - Math.exp(-window.WorldEngine.params.baseMortality * hr * window.WorldEngine.params.dt);
+                        let pESRD = 1 - Math.exp(-window.WorldEngine.params.baseESRD * hr * window.WorldEngine.params.dt);
+
+                        const dying = bin.state.stable * pDie;
+                        const progressing = bin.state.stable * pESRD;
+                        
+                        bin.state.stable -= (dying + progressing);
+                        bin.state.esrd += progressing;
+                        bin.state.dead += dying;
+                        
+                        const dyingESRD = bin.state.esrd * (pDie * 3);
+                        bin.state.esrd -= dyingESRD;
+                        bin.state.dead += dyingESRD;
+
+                        // QALYs: Stable=0.9, ESRD=0.6
+                        const q = (bin.state.stable * 0.9 + bin.state.esrd * 0.6) * window.WorldEngine.params.dt;
+                        const c = (tx !== 'Placebo' ? bin.state.stable * window.WorldEngine.params.costs.drug * window.WorldEngine.params.dt : 0) + (bin.state.esrd * window.WorldEngine.params.costs.esrd * window.WorldEngine.params.dt);
+                        stepQALY += q; stepCost += c;
+                    });
+                    cumQALY += stepQALY; cumCost += stepCost;
+                    history.push({ t: currentTime, totalStable: activeBins.reduce((a,b)=>a+b.state.stable,0), totalESRD: activeBins.reduce((a,b)=>a+b.state.esrd,0), cumQALY, cumCost });
+                    currentTime += window.WorldEngine.params.dt;
+                }
+                return history;
+            }
+        };
+
+        // --- 6. UI CONTROLLER ---
+        window.UI = {
+            setTab: (tab) => {
+                document.querySelectorAll('.view-panel').forEach(e => e.classList.add('hidden'));
+                document.getElementById(`view-${tab}`).classList.remove('hidden');
+                document.querySelectorAll('.tab-btn').forEach(e => {
+                    e.classList.remove('tab-active'); e.classList.remove('text-fuchsia-400'); e.classList.add('text-slate-400');
+                });
+                const activeBtn = document.querySelector(`[onclick="window.UI.setTab('${tab}')"]`);
+                if(activeBtn) { activeBtn.classList.add('tab-active'); activeBtn.classList.remove('text-slate-400'); activeBtn.classList.add('text-fuchsia-400'); }
+                window.dispatchEvent(new Event('resize'));
+            }
+        };
+
+        window.App = {
+            allTrials: [], data: [], latestCNMA: [],
+            targetProfiles: { 'dkd': { features: [66, 0.3, 44, 2020] }, 'hfpef': { features: [72, 0.45, 55, 2024] }, 'stage4': { features: [70, 0.4, 25, 2022] } },
+            activeTarget: null, hiddenMolecules: new Set(),
+
+            init: () => { 
+                window.App.activeTarget = window.App.targetProfiles['dkd'];
+                const container = document.getElementById('network-container');
+                if (container) {
+                     window.network = new vis.Network(container, {nodes:[], edges:[]}, { nodes: {shape: 'dot', font: {color:'white'}}, physics: { stabilization: true }, interaction: {hover:true} });
+                }
+            },
+
+            injectDemo: () => {
+                const demoIds = Object.keys(TRIAL_REGISTRY);
+                const demoData = demoIds.map(id => {
+                     const t = TRIAL_REGISTRY[id];
+                     t.id = id;
+                     t.outcomes.forEach(o => o.se = window.Utils.ciToSe(o.lower, o.upper));
+                     return t;
+                });
+                window.App.allTrials = demoData;
+                window.App.data = demoData;
+                window.Logger.log("Loaded Finerenone + Comparator Trials.", "success");
+                window.App.updateUI();
+            },
+            injectRegistry: () => { window.Logger.log("Registry Upload Simulated.", "info"); },
+
+            updateUI: () => {
+                const outcome = document.getElementById('outcome-select').value;
+                window.App.data = window.App.allTrials.filter(t => t.outcomes.some(o => o.id === outcome || o.id === 'composite'));
+                
+                const counter = document.getElementById('trial-counter');
+                if(counter) counter.innerText = `${window.App.allTrials.length} / ${window.App.data.length} Trials`;
+
+                // Network
+                const nodes = window.App.data.map(t => ({ id: t.id, label: t.name, value: Math.sqrt(t.n), group: t.molecule, title: t.name }));
+                if(window.network) window.network.setData({nodes, edges:[]});
+
+                // Stats
+                const cnma = window.StatsEngine.runCNMA(window.App.data, outcome);
+                window.App.latestCNMA = cnma || [];
+                window.App.renderForestPlot();
+
+                // Geometry
+                const validGeo = window.App.allTrials.filter(t => t.features);
+                if(validGeo.length > 2) {
+                     const data = validGeo.map(t => t.features);
+                     const meanAge = window.Utils.mean(data.map(d=>d[0]));
+                     const meanGFR = window.Utils.mean(data.map(d=>d[2]));
+                     const colors = validGeo.map(t => window.MOLECULE_STYLES[t.molecule]?.color || '#999');
+                     Plotly.newPlot('geometry-plot', [{
+                         x: validGeo.map(t => t.features[0] - meanAge),
+                         y: validGeo.map(t => t.features[2] - meanGFR),
+                         mode:'markers', marker:{size:10, color:colors}, text:validGeo.map(t=>t.name), type:'scatter'
+                     }], {paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'}, xaxis:{title:'Age (Centered)'}, yaxis:{title:'eGFR (Centered)'}}, {displayModeBar:false});
+                }
+            },
+
+            renderForestPlot: () => {
+                const cnma = window.App.latestCNMA;
+                const modeEl = document.getElementById('forest-mode');
+                const mode = modeEl ? modeEl.value : 'components';
+                
+                if(cnma && cnma.length) {
+                     let plotData = [];
+                     if (mode === 'components') {
+                         const x = cnma.map(r=>r.hr);
+                         const y = cnma.map(r=>r.molecule);
+                         const colors = cnma.map(r => window.MOLECULE_STYLES[r.molecule]?.color || '#999');
+                         plotData = [{x, y, type: 'bar', orientation: 'h', marker:{color:colors}}];
+                     } else {
+                        const groups = {};
+                        cnma.forEach(r => {
+                            const macro = window.MOLECULE_TO_MACRO[r.molecule] || 'Other';
+                            if(!groups[macro]) groups[macro] = [];
+                            groups[macro].push(r);
+                        });
+                        const x = [], y = [], colors = [];
+                        Object.keys(groups).forEach(k => {
+                            const avgHR = groups[k].reduce((s, i) => s + i.hr, 0) / groups[k].length;
+                            x.push(avgHR);
+                            y.push(k);
+                            colors.push(window.MACRO_STYLES[k]?.color || '#999');
+                        });
+                        plotData = [{x, y, type: 'bar', orientation: 'h', marker:{color:colors}}];
+                     }
+                     Plotly.newPlot('forest-plot', plotData, {paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'}, margin:{l:100}}, {displayModeBar:false});
+                } else {
+                     Plotly.newPlot('forest-plot', [], {paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)'});
+                }
+                
+                // --- EGGERS PLOT RENDERING ---
+                const activeData = window.App.data; 
+                const eggers = window.StatsEngine.runEggers(activeData, window.App.currentOutcome);
+                const pLabel = document.getElementById('egger-p');
+                
+                if(eggers) {
+                    pLabel.innerText = `P-Val: ${eggers.pValue.toFixed(3)}`;
+                    pLabel.className = eggers.pValue < 0.05 ? "font-mono text-xs text-red-400 font-bold" : "font-mono text-xs text-emerald-400";
+                    const valid = activeData.filter(t => t.outcomes.some(o=>o.id===window.App.currentOutcome || o.id==='composite'));
+                    
+                    Plotly.newPlot('funnel-plot', [{ 
+                        x: valid.map(t => { const o = t.outcomes.find(x=>x.id===window.App.currentOutcome || x.id==='composite'); return Math.log(o.hr); }), 
+                        y: valid.map(t => { const o = t.outcomes.find(x=>x.id===window.App.currentOutcome || x.id==='composite'); return o.se; }), 
+                        mode: 'markers', type: 'scatter', marker: {color: '#94a3b8'} 
+                    }], { 
+                        paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'}, 
+                        xaxis:{title:'Log HR'}, yaxis:{title:'SE', autorange:'reversed'}, margin:{t:10, b:40, l:50, r:10} 
+                    }, {displayModeBar:false});
+                } else { 
+                    pLabel.innerText = "Insufficient Data"; 
+                    Plotly.newPlot('funnel-plot', [], {
+                        paper_bgcolor:'rgba(0,0,0,0)', 
+                        plot_bgcolor:'rgba(0,0,0,0)', 
+                        xaxis:{showgrid:false, zeroline:false, showticklabels:false}, 
+                        yaxis:{showgrid:false, zeroline:false, showticklabels:false}, 
+                        annotations: [{text: "Need 3+ trials for bias check", xref: "paper", yref: "paper", x: 0.5, y: 0.5, font: {color: "#64748b"}}]
+                    });
+                }
+            },
+            
+            runPipeline: async () => {
+                const btn = document.getElementById('btn-fetch');
+                btn.innerHTML = `<span class="loader"></span> processing...`; btn.disabled = true;
+                window.Logger.log("Starting Data Pipeline...", "info");
+                try {
+                    const client = new window.CtgovClient();
+                    const parser = new window.TrialParser();
+                    
+                    let allRaw = [];
+                    let token = null;
+                    let pages = 0;
+                    
+                    do {
+                        const batch = await client.fetchBatch(token);
+                        allRaw = allRaw.concat(batch.studies || []);
+                        token = batch.nextPageToken;
+                        pages++;
+                        window.Logger.log(`Fetched page ${pages}...`, "info");
+                    } while(token && pages < 5);
+
+                    const parsed = allRaw.map(s => parser.parse(s)).filter(t => t);
+                    
+                    // Force registry injection
+                    const registryIds = Object.keys(TRIAL_REGISTRY);
+                    registryIds.forEach(id => {
+                        if (!parsed.some(t => t.id === id)) {
+                             const reg = TRIAL_REGISTRY[id];
+                             reg.id = id;
+                             reg.outcomes.forEach(o => o.se = window.Utils.ciToSe(o.lower, o.upper));
+                             parsed.push(reg);
+                        }
+                    });
+
+                    window.App.allTrials = parsed;
+                    
+                    if (parsed.length < 5 || !parsed.some(t => t.outcomes.length > 0)) {
+                        window.Logger.log("Live data insufficient. Loading Validated Set.", "warn");
+                        window.App.injectDemo();
+                        return;
+                    }
+
+                    window.Logger.log(`Found ${parsed.length} total trials.`, "info");
+                    window.App.updateUI();
+                } catch(e) { 
+                    window.Logger.log("Error: " + e.message, "error"); 
+                    window.App.injectDemo();
+                } finally { 
+                    btn.innerHTML = `<span>Fetch Universe (Live)</span>`; btn.disabled = false; 
+                }
+            }
+        };
+
+        window.Simulation = {
+            run: () => {
+                if(!window.App.latestCNMA.length) return alert("Run analysis first");
+                // Uses the globally defined window.HFBin and window.Policy
+                const bins = window.App.data.map(t => new window.HFBin(t.id, t.features, t.n));
+                const policies = {
+                    'sq': new window.Policy('Status Quo (RASi)', [() => 'RASi']),
+                    'finerenone': new window.Policy('Universal Finerenone', [() => 'Finerenone']),
+                    'personalized': new window.Policy('Risk-Based', [bin => bin.features[2] < 45 ? 'Finerenone' : 'SGLT2i'])
+                };
+                const pol = document.getElementById('policy-select').value;
+                const res = window.WorldEngine.run(policies[pol], bins, window.App.latestCNMA);
+                Plotly.newPlot('sim-plot-states', [{x: res.map(r=>r.t), y: res.map(r=>r.totalStable), name: 'Stable CKD', stackgroup:'one', line:{color:'#10b981'}}, {x: res.map(r=>r.t), y: res.map(r=>r.totalESRD), name: 'ESRD', stackgroup:'one', line:{color:'#f59e0b'}}], {paper_bgcolor:'rgba(0,0,0,0)', plot_bgcolor:'rgba(0,0,0,0)', font:{color:'#94a3b8'}});
+            }
+        };
+        
+        window.ExportEngine = { downloadCSV: () => { alert("Exporting..."); } };
+
+        window.WorldEngine = {
+             params: { timeHorizon: 10, dt: 0.25, baseMortality: 0.06, baseESRD: 0.04, costs: { drug: 600, esrd: 80000 } },
+             run: (policy, populationBins, cnmaResults) => {
+                const history = [];
+                let currentTime = 0;
+                // Full simulation logic using globally defined HFBin
+                const activeBins = populationBins.map(b => new window.HFBin(b.id, b.features, b.size));
+                let cumQALY = 0, cumCost = 0;
+
+                while (currentTime < window.WorldEngine.params.timeHorizon) {
+                    let stepQALY = 0, stepCost = 0;
+                    activeBins.forEach(bin => {
+                        const tx = policy.getTreatment(bin);
+                        const hr = window.MuToTheta.predict(bin, tx, cnmaResults);
+                        
+                        // Rates
+                        let pDie = 1 - Math.exp(-window.WorldEngine.params.baseMortality * hr * window.WorldEngine.params.dt);
+                        let pESRD = 1 - Math.exp(-window.WorldEngine.params.baseESRD * hr * window.WorldEngine.params.dt);
+
+                        const dying = bin.state.stable * pDie;
+                        const progressing = bin.state.stable * pESRD;
+                        
+                        bin.state.stable -= (dying + progressing);
+                        bin.state.esrd += progressing;
+                        bin.state.dead += dying;
+                        
+                        const dyingESRD = bin.state.esrd * (pDie * 3);
+                        bin.state.esrd -= dyingESRD;
+                        bin.state.dead += dyingESRD;
+
+                        // QALYs: Stable=0.9, ESRD=0.6
+                        const q = (bin.state.stable * 0.9 + bin.state.esrd * 0.6) * window.WorldEngine.params.dt;
+                        const c = (tx !== 'Placebo' ? bin.state.stable * window.WorldEngine.params.costs.drug * window.WorldEngine.params.dt : 0) + (bin.state.esrd * window.WorldEngine.params.costs.esrd * window.WorldEngine.params.dt);
+                        stepQALY += q; stepCost += c;
+                    });
+                    cumQALY += stepQALY; cumCost += stepCost;
+                    history.push({ t: currentTime, totalStable: activeBins.reduce((a,b)=>a+b.state.stable,0), totalESRD: activeBins.reduce((a,b)=>a+b.state.esrd,0), cumQALY, cumCost });
+                    currentTime += window.WorldEngine.params.dt;
+                }
+                return history;
+            }
+        };
+
+        window.onload = () => { window.App.init(); };
+
+    </script>
+</body>
+</html>

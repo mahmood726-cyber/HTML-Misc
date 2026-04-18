@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ACS Dojo | Junior Doctor Simulation</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&family=JetBrains+Mono:wght@400;700&display=swap');
+
+        :root {
+            --monitor-bg: #0f172a;
+            --ecg-color: #22c55e;
+            --alert-color: #ef4444;
+            --panel-bg: #1e293b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #020617;
+            color: #e2e8f0;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        /* CRT Monitor Effect */
+        .monitor-screen {
+            background: var(--monitor-bg);
+            border: 2px solid #334155;
+            box-shadow: inset 0 0 20px rgba(0,0,0,0.8);
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .monitor-screen::before {
+            content: " ";
+            display: block;
+            position: absolute;
+            top: 0; left: 0; bottom: 0; right: 0;
+            background: linear-gradient(rgba(18, 16, 16, 0) 50%, rgba(0, 0, 0, 0.25) 50%), linear-gradient(90deg, rgba(255, 0, 0, 0.06), rgba(0, 255, 0, 0.02), rgba(0, 0, 255, 0.06));
+            z-index: 2;
+            background-size: 100% 2px, 3px 100%;
+            pointer-events: none;
+        }
+
+        .ecg-grid {
+            background-image: 
+                linear-gradient(rgba(51, 65, 85, 0.3) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(51, 65, 85, 0.3) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        /* Typography */
+        .digital-font {
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Animations */
+        @keyframes pulse-red {
+            0% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7); }
+            70% { box-shadow: 0 0 0 10px rgba(239, 68, 68, 0); }
+            100% { box-shadow: 0 0 0 0 rgba(239, 68, 68, 0); }
+        }
+
+        .critical-alert {
+            animation: pulse-red 1.5s infinite;
+            border-color: var(--alert-color);
+        }
+
+        .custom-scrollbar::-webkit-scrollbar {
+            width: 8px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-track {
+            background: #1e293b; 
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #475569; 
+            border-radius: 4px;
+        }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #64748b; 
+        }
+
+        .btn-action {
+            transition: all 0.2s;
+            position: relative;
+            overflow: hidden;
+        }
+        .btn-action:active {
+            transform: scale(0.98);
+        }
+        
+        /* Interactive Elements */
+        .drug-card {
+            border: 1px solid #334155;
+            transition: all 0.2s;
+        }
+        .drug-card.selected {
+            border-color: #3b82f6;
+            background-color: rgba(59, 130, 246, 0.1);
+        }
+
+        .ecg-paper {
+            background-color: #fff0f5; /* Lighter Rose */
+            background-image: 
+                linear-gradient(#ffc0cb 1px, transparent 1px),
+                linear-gradient(90deg, #ffc0cb 1px, transparent 1px);
+            background-size: 15px 15px; /* Standard 1mm boxes approx scaled */
+            position: relative;
+        }
+
+        /* Lead Canvas Styles */
+        .lead-container {
+            position: relative;
+            height: 100px;
+            border-left: 1px solid #ffc0cb;
+            border-bottom: 1px solid #ffc0cb;
+        }
+        .lead-label {
+            position: absolute;
+            top: 2px;
+            left: 4px;
+            font-size: 10px;
+            font-weight: bold;
+            color: #333;
+            background: rgba(255,255,255,0.7);
+            padding: 1px 3px;
+            border-radius: 2px;
+            z-index: 10;
+        }
+        
+        /* Modal transitions */
+        .modal-enter { opacity: 0; transform: scale(0.95); }
+        .modal-enter-active { opacity: 1; transform: scale(1); transition: opacity 300ms, transform 300ms; }
+        .modal-exit { opacity: 1; }
+        .modal-exit-active { opacity: 0; transition: opacity 200ms; }
+
+    </style>
+</head>
+<body class="flex flex-col h-screen">
+
+    <!-- HEADER -->
+    <header class="bg-slate-900 border-b border-slate-700 p-4 flex justify-between items-center h-16 shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="bg-blue-600 p-2 rounded-lg">
+                <i class="fa-solid fa-heart-pulse text-white"></i>
+            </div>
+            <div>
+                <h1 class="font-bold text-lg text-white tracking-tight">ACS Dojo</h1>
+                <p class="text-xs text-slate-400">Advanced Scenario: Inferior MI</p>
+            </div>
+        </div>
+        <div class="flex gap-4">
+            <div class="bg-slate-800 px-4 py-1 rounded border border-slate-700 text-center">
+                <span class="text-[10px] text-slate-400 uppercase block">Case Score</span>
+                <span id="scoreDisplay" class="font-bold text-blue-400 digital-font">100</span>
+            </div>
+            <button onclick="restartSim()" class="text-xs text-slate-400 hover:text-white underline">Reset Sim</button>
+        </div>
+    </header>
+
+    <!-- MAIN LAYOUT -->
+    <div class="flex flex-1 overflow-hidden">
+        
+        <!-- LEFT: PATIENT MONITOR & VITALS -->
+        <div class="w-1/3 bg-slate-950 border-r border-slate-800 flex flex-col p-4 gap-4">
+            
+            <!-- Vitals Monitor -->
+            <div id="monitorFrame" class="monitor-screen rounded-xl h-64 relative bg-black ecg-grid flex flex-col p-4 transition-colors duration-500">
+                <div class="absolute top-2 right-2 text-xs text-green-500 opacity-50" id="monitorLabel">LIVE MONITOR (Lead II)</div>
+                
+                <!-- ECG Canvas -->
+                <canvas id="ecgCanvas" class="w-full h-32 mb-2"></canvas>
+                
+                <!-- Numeric Vitals -->
+                <div class="grid grid-cols-3 gap-2 mt-auto">
+                    <!-- HR -->
+                    <div class="bg-slate-900/50 p-2 rounded border-l-2 border-green-500">
+                        <span class="text-[10px] text-slate-400 block">HR (bpm)</span>
+                        <span id="hrVal" class="text-2xl font-bold text-green-500 digital-font transition-all">88</span>
+                    </div>
+                    <!-- BP -->
+                    <div class="bg-slate-900/50 p-2 rounded border-l-2 border-blue-500">
+                        <span class="text-[10px] text-slate-400 block">NIBP (mmHg)</span>
+                        <span id="bpVal" class="text-2xl font-bold text-blue-500 digital-font transition-all">145/92</span>
+                    </div>
+                    <!-- SpO2 -->
+                    <div class="bg-slate-900/50 p-2 rounded border-l-2 border-yellow-500">
+                        <span class="text-[10px] text-slate-400 block">SpO2 (%)</span>
+                        <span id="spo2Val" class="text-2xl font-bold text-yellow-500 digital-font">98</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Patient Info -->
+            <div class="bg-slate-900 rounded-xl p-4 border border-slate-800 flex-1 overflow-y-auto custom-scrollbar">
+                <h3 class="text-sm font-semibold text-slate-300 mb-3 border-b border-slate-700 pb-2">
+                    <i class="fa-solid fa-user-injured mr-2"></i>Patient Status
+                </h3>
+                <div id="patientHistory" class="text-sm text-slate-400 space-y-4">
+                    <!-- Dynamic content injected here -->
+                </div>
+            </div>
+        </div>
+
+        <!-- RIGHT: INTERACTIVE WORKSPACE -->
+        <div class="w-2/3 bg-slate-900 relative flex flex-col">
+            
+            <!-- Progress Steps -->
+            <div class="h-12 border-b border-slate-800 flex items-center px-6 gap-2 overflow-x-auto whitespace-nowrap custom-scrollbar">
+                <div id="step-0" class="step-indicator text-xs px-3 py-1 rounded-full border">1. Assessment</div>
+                <div class="w-4 h-[1px] bg-slate-700 shrink-0"></div>
+                <div id="step-1" class="step-indicator text-xs px-3 py-1 rounded-full border">2. ECG</div>
+                <div class="w-4 h-[1px] bg-slate-700 shrink-0"></div>
+                <div id="step-2" class="step-indicator text-xs px-3 py-1 rounded-full border">3. Diagnosis</div>
+                <div class="w-4 h-[1px] bg-slate-700 shrink-0"></div>
+                <div id="step-3" class="step-indicator text-xs px-3 py-1 rounded-full border">4. Investigation</div>
+                <div class="w-4 h-[1px] bg-slate-700 shrink-0"></div>
+                <div id="step-4" class="step-indicator text-xs px-3 py-1 rounded-full border">5. Crisis A</div>
+                <div class="w-4 h-[1px] bg-slate-700 shrink-0"></div>
+                <div id="step-5" class="step-indicator text-xs px-3 py-1 rounded-full border">6. Crisis B</div>
+                <div class="w-4 h-[1px] bg-slate-700 shrink-0"></div>
+                <div id="step-6" class="step-indicator text-xs px-3 py-1 rounded-full border">7. Drugs</div>
+            </div>
+
+            <!-- Main Interaction Area -->
+            <div id="interactionArea" class="flex-1 p-6 overflow-y-auto custom-scrollbar relative">
+                <!-- Scenes inject here -->
+            </div>
+
+            <!-- Feedback Overlay -->
+            <div id="feedbackOverlay" class="absolute inset-0 bg-slate-950/90 backdrop-blur-sm z-50 hidden flex items-center justify-center p-8">
+                <div class="bg-slate-900 border border-slate-700 rounded-2xl max-w-2xl w-full p-6 shadow-2xl transform transition-all">
+                    <div class="flex items-start gap-4">
+                        <div id="feedbackIcon" class="p-3 rounded-full bg-blue-600/20 text-blue-500 mt-1">
+                            <i class="fa-solid fa-info"></i>
+                        </div>
+                        <div class="flex-1">
+                            <h2 id="feedbackTitle" class="text-xl font-bold text-white mb-2">Senior Review</h2>
+                            <p id="feedbackText" class="text-slate-300 leading-relaxed mb-4">Feedback goes here...</p>
+                            
+                            <div id="feedbackReference" class="bg-slate-800 rounded p-3 text-xs text-slate-400 font-mono mb-4 border-l-2 border-slate-600">
+                                Reference: ESC Guidelines 2023 ACS Management
+                            </div>
+
+                            <button onclick="nextScene()" class="bg-white text-slate-900 hover:bg-slate-200 px-6 py-2 rounded-lg font-bold text-sm transition-colors">
+                                Continue
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- GAME STATE ---
+        const state = {
+            currentStep: 0,
+            score: 100,
+            diagnosis: null,
+            painScore: 8,
+            hr: 88,
+            bp: '145/92',
+            spo2: 98,
+            ecgType: 'stemi_inf',
+            monitorRhythm: 'sinus' // sinus, brady, block
+        };
+
+        // --- GLOBAL VARIABLES ---
+        const selectedDrugs = new Set();
+        let currentMonitorInterval = 1.5; // speed control
+
+        // --- SCENARIO DATA ---
+        const scenarios = {
+            SCENARIO_1: {
+                intro: `
+                    <p><strong class="text-white">Patient:</strong> 58-year-old Male.</p>
+                    <p><strong class="text-white">PC:</strong> "Heavy weight" on chest started 45 mins ago while gardening. Radiates to left jaw.</p>
+                    <p><strong class="text-white">PMHx:</strong> Hypertension, Smoker (20/day), T2DM.</p>
+                    <p><strong class="text-white">O/E:</strong> Pale, sweaty. Chest clear. Heart sounds normal.</p>
+                `,
+            }
+        };
+
+        // --- REALISTIC ECG RENDERER ---
+        
+        // Generates a P-QRS-T complex array
+        function generateBeat(amp, ste, inv) {
+            const points = [];
+            const length = 100;
+            const baseline = 0;
+
+            for(let i=0; i<length; i++) {
+                let y = baseline;
+                if(i >= 10 && i < 20) y -= 2 * Math.exp(-Math.pow(i - 15, 2) / 10); // P
+                if(i >= 30 && i < 33) y += (amp * 0.1) * ((i-30)/3); // Q
+                if(i >= 33 && i < 37) y -= amp * ((i-33)/4); // R
+                if(i >= 37 && i < 42) y += (amp + (amp*0.2)) * ((i-37)/5) - amp; // S
+                if(i >= 42 && i < 45) y -= (amp * 0.2) * ((i-42)/3) - (amp*0.2); // J
+                if(i >= 45) { // ST-T
+                    let st_val = ste;
+                    if(i >= 65 && i < 90) {
+                        const t_amp = inv ? 10 : -8;
+                        const t_morph = t_amp * Math.exp(-Math.pow(i - 77, 2) / 40);
+                        y += st_val + t_morph;
+                    } else { y += st_val; }
+                }
+                if(i >= 90) y *= (100-i)/10;
+                points.push(y);
+            }
+            return points;
+        }
+
+        // --- LIVE MONITOR LOGIC ---
+        const canvas = document.getElementById('ecgCanvas');
+        const ctx = canvas.getContext('2d');
+        let xPos = 0;
+        let animationId;
+        
+        let monitorTime = 0;
+        let monitorPrevY = 0;
+        const monitorBeat = generateBeat(30, -8, false); // Inferior STEMI Lead II
+        
+        function resizeCanvas() {
+            canvas.width = canvas.parentElement.clientWidth;
+            canvas.height = canvas.parentElement.clientHeight;
+        }
+        window.addEventListener('resize', resizeCanvas);
+        resizeCanvas();
+
+        function animateMonitor() {
+            const h = canvas.height;
+            const w = canvas.width;
+            const base = h/2;
+            
+            // Fade bar
+            ctx.fillStyle = '#0f172a';
+            ctx.fillRect(xPos, 0, 8, h);
+
+            ctx.beginPath();
+            ctx.strokeStyle = '#22c55e';
+            ctx.lineWidth = 2;
+            
+            let beatVal = 0;
+            
+            if (state.monitorRhythm === 'sinus') {
+                const beatIndex = Math.floor(monitorTime) % monitorBeat.length;
+                beatVal = monitorBeat[beatIndex];
+            } else if (state.monitorRhythm === 'block') {
+                 // Simulate CHB: P waves marching through, QRS slow
+                 // Procedurally tricky, so we will just slow the whole complex down for visual effect
+                 // and rely on the numeric display changes
+                 const beatIndex = Math.floor(monitorTime) % monitorBeat.length;
+                 beatVal = monitorBeat[beatIndex];
+            }
+
+            const noise = (Math.random() - 0.5) * 2;
+            let y = base + beatVal + noise;
+            
+            if(xPos > 0) ctx.moveTo(xPos - 2, monitorPrevY);
+            else ctx.moveTo(0, base);
+            
+            ctx.lineTo(xPos, y);
+            ctx.stroke();
+            
+            monitorPrevY = y;
+            xPos += 2;
+            monitorTime += currentMonitorInterval; 
+            
+            if(xPos > w) {
+                xPos = 0;
+                ctx.fillStyle = '#0f172a';
+                ctx.fillRect(0,0, w, h);
+            }
+            
+            animationId = requestAnimationFrame(animateMonitor);
+        }
+
+        // --- 12-LEAD DRAWER ---
+        function drawLead(canvasId, config) {
+            const c = document.getElementById(canvasId);
+            if(!c) return;
+            const cx = c.getContext('2d');
+            const dpr = window.devicePixelRatio || 1;
+            const rect = c.getBoundingClientRect();
+            c.width = rect.width * dpr;
+            c.height = rect.height * dpr;
+            cx.scale(dpr, dpr);
+            cx.translate(0, rect.height/2);
+
+            const beat = generateBeat(config.amp, config.ste, config.inv);
+            cx.beginPath();
+            cx.strokeStyle = '#000';
+            cx.lineWidth = 1.5;
+            cx.lineJoin = 'round';
+            cx.lineCap = 'round';
+
+            let x = 0;
+            const step = (rect.width / (beat.length * 2.5)); 
+            
+            for(let k=0; k<3; k++) {
+                for(let i=0; i<beat.length; i++) {
+                    if(k==0 && i==0) cx.moveTo(x, beat[i]);
+                    else cx.lineTo(x, beat[i]);
+                    x += step;
+                }
+                for(let i=0; i<20; i++) { cx.lineTo(x, 0 + (Math.random()-0.5)); x += step; }
+            }
+            cx.stroke();
+        }
+
+        // --- SCENE MANAGEMENT ---
+
+        function renderScene() {
+            const area = document.getElementById('interactionArea');
+            area.innerHTML = ''; 
+
+            // Update Progress Bar
+            document.querySelectorAll('.step-indicator').forEach((el, idx) => {
+                const baseClass = "step-indicator text-xs px-3 py-1 rounded-full border shrink-0 transition-colors";
+                if(idx === state.currentStep) {
+                    el.className = `${baseClass} font-bold text-blue-400 bg-blue-900/30 border-blue-500/50`;
+                } else if (idx < state.currentStep) {
+                    el.className = `${baseClass} font-bold text-green-400 bg-green-900/10 border-green-500/50 opacity-70`;
+                } else {
+                    el.className = `${baseClass} text-slate-500 border-slate-700`;
+                }
+            });
+
+            switch(state.currentStep) {
+                case 0: sceneAssessment(area); break;
+                case 1: sceneECG(area); break;
+                case 2: sceneDiagnosis(area); break;
+                case 3: sceneRVCheck(area); break;
+                case 4: sceneHypotension(area); break;
+                case 5: sceneBradycardia(area); break;
+                case 6: sceneTreatment(area); break;
+                case 7: sceneSummary(area); break;
+            }
+        }
+
+        // --- SCENE 1: ASSESSMENT ---
+        function sceneAssessment(container) {
+            document.getElementById('patientHistory').innerHTML = scenarios.SCENARIO_1.intro;
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto animate-fade-in">
+                    <h2 class="text-2xl font-bold text-white mb-4">1. Initial Assessment</h2>
+                    <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 mb-6">
+                        <p class="text-slate-300 text-lg mb-4">You are the SHO in ED. The nurse hands you an ECG.</p>
+                        <p class="text-slate-400">"Doctor, this gentleman looks unwell. His pain is 8/10. Here is his 12-lead."</p>
+                    </div>
+                    <h3 class="text-white font-bold mb-3">Immediate Actions?</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <button onclick="handleAction('history')" class="btn-action bg-slate-800 hover:bg-slate-700 border border-slate-600 p-4 rounded-lg text-left group">
+                            <span class="text-blue-400 font-bold block group-hover:text-blue-300">Take detailed history</span>
+                            <span class="text-xs text-slate-500">Ask about family history, diet, exercise...</span>
+                        </button>
+                        <button onclick="handleAction('abg')" class="btn-action bg-slate-800 hover:bg-slate-700 border border-slate-600 p-4 rounded-lg text-left group">
+                            <span class="text-blue-400 font-bold block group-hover:text-blue-300">Perform ABG</span>
+                            <span class="text-xs text-slate-500">Check lactate and oxygenation...</span>
+                        </button>
+                         <button onclick="handleAction('ecg_assess')" class="btn-action bg-blue-600 hover:bg-blue-500 border border-blue-400 p-4 rounded-lg text-left shadow-lg shadow-blue-900/20">
+                            <span class="text-white font-bold block"><i class="fa-solid fa-eye mr-2"></i>Look at the ECG immediately</span>
+                            <span class="text-xs text-blue-100">Time is muscle. 10 minute target.</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        // --- SCENE 2: ECG ---
+        function sceneECG(container) {
+            const html = `
+                <div class="max-w-5xl mx-auto">
+                    <h2 class="text-xl font-bold text-white mb-2 flex justify-between">
+                        <span>2. Interpret 12-Lead ECG</span>
+                        <span class="text-xs font-normal text-slate-400 bg-slate-800 px-2 py-1 rounded">25mm/s 10mm/mV</span>
+                    </h2>
+                    
+                    <div class="bg-white p-2 rounded shadow-inner mb-6 ecg-paper relative overflow-hidden border-t-4 border-red-500">
+                        <div class="grid grid-cols-4 gap-0.5">
+                            <div class="lead-container"><div class="lead-label">I</div><canvas id="l-I" class="w-full h-full"></canvas></div>
+                            <div class="lead-container"><div class="lead-label">aVR</div><canvas id="l-aVR" class="w-full h-full"></canvas></div>
+                            <div class="lead-container"><div class="lead-label">V1</div><canvas id="l-V1" class="w-full h-full"></canvas></div>
+                            <div class="lead-container"><div class="lead-label">V4</div><canvas id="l-V4" class="w-full h-full"></canvas></div>
+
+                            <div class="lead-container"><div class="lead-label">II</div><canvas id="l-II" class="w-full h-full"></canvas></div>
+                            <div class="lead-container"><div class="lead-label">aVL</div><canvas id="l-aVL" class="w-full h-full"></canvas></div>
+                            <div class="lead-container"><div class="lead-label">V2</div><canvas id="l-V2" class="w-full h-full"></canvas></div>
+                            <div class="lead-container"><div class="lead-label">V5</div><canvas id="l-V5" class="w-full h-full"></canvas></div>
+
+                            <div class="lead-container"><div class="lead-label">III</div><canvas id="l-III" class="w-full h-full"></canvas></div>
+                            <div class="lead-container"><div class="lead-label">aVF</div><canvas id="l-aVF" class="w-full h-full"></canvas></div>
+                            <div class="lead-container"><div class="lead-label">V3</div><canvas id="l-V3" class="w-full h-full"></canvas></div>
+                            <div class="lead-container"><div class="lead-label">V6</div><canvas id="l-V6" class="w-full h-full"></canvas></div>
+                        </div>
+                        <div class="absolute bottom-1 right-2 text-xs text-slate-500 font-mono">Sinus Rhythm, 88bpm, Axis: Right Deviation</div>
+                    </div>
+
+                    <h3 class="text-white font-bold mb-3">What is your interpretation?</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <button onclick="handleDx('normal')" class="btn-action p-4 rounded bg-slate-800 border border-slate-600 text-slate-300 hover:bg-slate-700">Normal / Non-specific</button>
+                        <button onclick="handleDx('nstemi')" class="btn-action p-4 rounded bg-slate-800 border border-slate-600 text-slate-300 hover:bg-slate-700">ST Depression (Ischaemia)</button>
+                        <button onclick="handleDx('stemi_ant')" class="btn-action p-4 rounded bg-slate-800 border border-slate-600 text-slate-300 hover:bg-slate-700">Anterior STEMI (V1-V4)</button>
+                        <button onclick="handleDx('stemi_inf')" class="btn-action p-4 rounded bg-slate-800 border border-slate-600 text-slate-300 hover:bg-slate-700">Inferior STEMI (II, III, aVF)</button>
+                    </div>
+                </div>
+            `;
+            container.innerHTML = html;
+            setTimeout(() => {
+                drawLead('l-I', { amp: 15, ste: 3, inv: false });   
+                drawLead('l-aVR', { amp: -15, ste: 2, inv: true }); 
+                drawLead('l-V1', { amp: 10, ste: 0, inv: false });
+                drawLead('l-V4', { amp: 35, ste: 0, inv: false });
+                drawLead('l-II', { amp: 30, ste: -8, inv: false }); 
+                drawLead('l-aVL', { amp: 15, ste: 5, inv: true });  
+                drawLead('l-V2', { amp: 15, ste: 0, inv: false });
+                drawLead('l-V5', { amp: 30, ste: 0, inv: false });
+                drawLead('l-III', { amp: 25, ste: -12, inv: false }); 
+                drawLead('l-aVF', { amp: 28, ste: -10, inv: false }); 
+                drawLead('l-V3', { amp: 25, ste: 0, inv: false });
+                drawLead('l-V6', { amp: 25, ste: 0, inv: false });
+            }, 50);
+        }
+
+        // --- SCENE 3: DIAGNOSIS ---
+        function sceneDiagnosis(container) {
+            container.innerHTML = `
+                 <div class="max-w-3xl mx-auto text-center pt-10 animate-fade-in">
+                    <div class="inline-block p-6 rounded-full bg-green-500/20 text-green-500 text-4xl mb-6">
+                        <i class="fa-solid fa-check"></i>
+                    </div>
+                    <h2 class="text-3xl font-bold text-white mb-4">3. Correct: Inferior STEMI</h2>
+                    <p class="text-slate-400 mb-8 max-w-lg mx-auto">
+                        Occlusion of the Right Coronary Artery (RCA) affects the inferior wall. 
+                        However, the RCA also supplies the <strong>Right Ventricle (RV)</strong> in most people.
+                    </p>
+                    <button onclick="nextScene()" class="bg-blue-600 hover:bg-blue-500 text-white px-8 py-3 rounded-lg font-bold transition-all">
+                        Next Step
+                    </button>
+                 </div>
+            `;
+        }
+
+        // --- SCENE 4: INVESTIGATION (V4R) ---
+        function sceneRVCheck(container) {
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto animate-fade-in">
+                    <h2 class="text-2xl font-bold text-white mb-4">4. Additional Investigation</h2>
+                    <div class="bg-slate-800 p-6 rounded-lg border border-slate-700 mb-6">
+                        <p class="text-slate-300">Your Registrar asks: <br><br><em>"This is an Inferior STEMI. Before we give any drugs, what specific ECG modification should we request to check for Right Ventricular Infarction?"</em></p>
+                    </div>
+
+                    <div class="grid grid-cols-1 gap-4">
+                        <button onclick="handleRVCheck('posterior')" class="btn-action bg-slate-800 p-4 rounded text-left hover:bg-slate-700 border border-slate-600">
+                            Request Posterior Leads (V7-V9)
+                        </button>
+                        <button onclick="handleRVCheck('lewis')" class="btn-action bg-slate-800 p-4 rounded text-left hover:bg-slate-700 border border-slate-600">
+                            Request Lewis Lead configuration
+                        </button>
+                        <button onclick="handleRVCheck('right')" class="btn-action bg-slate-800 p-4 rounded text-left hover:bg-slate-700 border border-slate-600">
+                            Request Right-Sided Leads (V4R)
+                        </button>
+                        <button onclick="handleRVCheck('none')" class="btn-action bg-slate-800 p-4 rounded text-left hover:bg-slate-700 border border-slate-600">
+                            No additional leads needed, proceed to PCI
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleRVCheck(choice) {
+            if(choice === 'right') {
+                showFeedback("Correct", "Right-sided leads (specifically V4R) are crucial in Inferior STEMI. ST elevation in V4R indicates Right Ventricular Infarction, which significantly changes hemodynamic management.", true);
+            } else {
+                state.score -= 10;
+                document.getElementById('scoreDisplay').innerText = state.score;
+                showFeedback("Incorrect", "We need to rule out Right Ventricular Infarction. The correct leads are Right-Sided (V4R). Posterior leads check the back of the heart, Lewis leads check atrial activity.", false);
+            }
+        }
+
+        // --- SCENE 5: CRISIS A (HYPOTENSION) ---
+        function sceneHypotension(container) {
+            // Update Vitals for this scene
+            document.getElementById('bpVal').innerText = "85/50";
+            document.getElementById('bpVal').classList.add('text-red-500', 'critical-alert');
+            document.getElementById('monitorFrame').classList.add('border-red-500');
+
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto animate-fade-in">
+                    <h2 class="text-2xl font-bold text-red-500 mb-2">5. Hemodynamic Crisis</h2>
+                    <div class="bg-red-900/20 border border-red-500/50 p-4 rounded mb-6">
+                        <p class="text-white font-bold"><i class="fa-solid fa-triangle-exclamation mr-2"></i>Status Change</p>
+                        <p class="text-red-200">The patient becomes lightheaded. BP has dropped to <span class="font-bold text-xl">85/50</span> mmHg. Lungs are clear on auscultation. JVP is elevated.</p>
+                    </div>
+
+                    <h3 class="text-white font-bold mb-3">Immediate Management?</h3>
+                    <div class="grid grid-cols-1 gap-4">
+                        <button onclick="handleHypo('gtn')" class="btn-action bg-slate-800 p-4 rounded text-left hover:bg-slate-700 border border-slate-600">
+                            Give GTN Spray (Sublingual)
+                        </button>
+                        <button onclick="handleHypo('fluids')" class="btn-action bg-slate-800 p-4 rounded text-left hover:bg-slate-700 border border-slate-600">
+                            Start IV Fluid Bolus (250-500ml)
+                        </button>
+                        <button onclick="handleHypo('furosemide')" class="btn-action bg-slate-800 p-4 rounded text-left hover:bg-slate-700 border border-slate-600">
+                            Give IV Furosemide 40mg
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleHypo(choice) {
+            if(choice === 'fluids') {
+                // Restore BP visual
+                setTimeout(() => {
+                    document.getElementById('bpVal').innerText = "105/65";
+                    document.getElementById('bpVal').classList.remove('text-red-500', 'critical-alert');
+                    document.getElementById('monitorFrame').classList.remove('border-red-500');
+                }, 1000);
+                showFeedback("Correct - Preload Dependence", "In RV Infarction, the RV acts as a passive conduit. It requires high preload (volume) to push blood to the LV. Hypotension with clear lungs in Inferior MI = Fluids.", true);
+            } else if (choice === 'gtn') {
+                state.score -= 20;
+                document.getElementById('scoreDisplay').innerText = state.score;
+                showFeedback("DANGEROUS", "GTN reduces preload. In a preload-dependent RV infarct, this can cause catastrophic cardiovascular collapse. <strong>GTN is contraindicated here.</strong>", false);
+            } else {
+                state.score -= 10;
+                showFeedback("Incorrect", "The lungs are clear, so this is not LV failure/pulmonary oedema. Furosemide will reduce preload and worsen the hypotension.", false);
+            }
+        }
+
+        // --- SCENE 6: CRISIS B (BRADYCARDIA/BLOCK) ---
+        function sceneBradycardia(container) {
+            // Update Vitals
+            state.monitorRhythm = 'block';
+            currentMonitorInterval = 3.0; // Slow down animation
+            document.getElementById('hrVal').innerText = "38";
+            document.getElementById('hrVal').classList.add('text-red-500', 'critical-alert');
+            
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto animate-fade-in">
+                    <h2 class="text-2xl font-bold text-red-500 mb-2">6. Arrhythmia Complication</h2>
+                    <div class="bg-red-900/20 border border-red-500/50 p-4 rounded mb-6">
+                        <p class="text-white font-bold"><i class="fa-solid fa-heart-crack mr-2"></i>Status Change</p>
+                        <p class="text-red-200">The heart rate suddenly drops to <span class="font-bold text-xl">38 bpm</span>. The patient is losing consciousness.</p>
+                        <p class="text-xs text-red-300 mt-2">Monitor shows P waves visible but dissociated from QRS (Complete Heart Block).</p>
+                    </div>
+
+                    <h3 class="text-white font-bold mb-3">First Line Treatment?</h3>
+                    <div class="grid grid-cols-1 gap-4">
+                        <button onclick="handleBrady('atropine')" class="btn-action bg-slate-800 p-4 rounded text-left hover:bg-slate-700 border border-slate-600">
+                            IV Atropine 500mcg
+                        </button>
+                        <button onclick="handleBrady('amiodarone')" class="btn-action bg-slate-800 p-4 rounded text-left hover:bg-slate-700 border border-slate-600">
+                            IV Amiodarone 300mg
+                        </button>
+                        <button onclick="handleBrady('adenosine')" class="btn-action bg-slate-800 p-4 rounded text-left hover:bg-slate-700 border border-slate-600">
+                            IV Adenosine 6mg
+                        </button>
+                    </div>
+                </div>
+            `;
+        }
+
+        function handleBrady(choice) {
+            if(choice === 'atropine') {
+                setTimeout(() => {
+                    document.getElementById('hrVal').innerText = "75";
+                    document.getElementById('hrVal').classList.remove('text-red-500', 'critical-alert');
+                    state.monitorRhythm = 'sinus';
+                    currentMonitorInterval = 1.5;
+                }, 1000);
+                showFeedback("Correct", "Complete Heart Block is common in Inferior MI due to AV nodal artery occlusion. Atropine is the first-line treatment for symptomatic bradycardia. Transcutaneous pacing pads should be applied as backup.", true);
+            } else {
+                state.score -= 15;
+                document.getElementById('scoreDisplay').innerText = state.score;
+                showFeedback("Incorrect", "Amiodarone and Adenosine will block the AV node further, worsening the heart block. We need to increase conduction (Atropine) or pace electrically.", false);
+            }
+        }
+
+        // --- SCENE 7: DRUGS ---
+        function sceneTreatment(container) {
+            const drugs = [
+                { id: 'aspirin', name: 'Aspirin 300mg', type: 'antiplatelet' },
+                { id: 'ticagrelor', name: 'Ticagrelor 180mg', type: 'antiplatelet' },
+                { id: 'gtn', name: 'GTN Spray', type: 'antianginal' },
+                { id: 'morphine', name: 'Morphine', type: 'analgesia' },
+                { id: 'heparin', name: 'Heparin', type: 'anticoag' },
+                { id: 'fluids', name: 'IV Fluids', type: 'support' }, // New option relevant to this case
+            ];
+
+            container.innerHTML = `
+                <div class="max-w-4xl mx-auto animate-fade-in">
+                    <h2 class="text-xl font-bold text-white mb-2">7. Final Preparation for Transfer</h2>
+                    <p class="text-slate-400 mb-4">Patient is stable (HR 75, BP 105/65). Select the final medication cocktail for PPCI transfer.</p>
+                    
+                    <div class="grid grid-cols-2 lg:grid-cols-3 gap-3" id="drugGrid">
+                        ${drugs.map(drug => `
+                            <div id="card-${drug.id}" onclick="toggleDrug('${drug.id}')" 
+                                 class="drug-card bg-slate-800 p-4 rounded cursor-pointer hover:bg-slate-750 flex items-center justify-between group select-none">
+                                <div><span class="font-bold text-slate-200 block">${drug.name}</span><span class="text-[10px] text-slate-500 uppercase">${drug.type}</span></div>
+                                <div class="w-6 h-6 rounded-full border-2 border-slate-600 flex items-center justify-center group-hover:border-slate-500"><div class="w-3 h-3 bg-blue-500 rounded-full opacity-0" id="check-${drug.id}"></div></div>
+                            </div>
+                        `).join('')}
+                    </div>
+                    <button onclick="submitTreatment()" class="mt-6 w-full bg-green-600 hover:bg-green-500 text-white py-3 rounded font-bold">Administer</button>
+                </div>
+            `;
+            selectedDrugs.forEach(id => {
+                const card = document.getElementById(`card-${id}`);
+                const check = document.getElementById(`check-${id}`);
+                if(card) { card.classList.add('selected'); check.classList.remove('opacity-0'); }
+            });
+        }
+        
+        function toggleDrug(id) {
+            const card = document.getElementById(`card-${id}`);
+            const check = document.getElementById(`check-${id}`);
+            if(selectedDrugs.has(id)) {
+                selectedDrugs.delete(id);
+                card.classList.remove('selected');
+                check.classList.add('opacity-0');
+            } else {
+                selectedDrugs.add(id);
+                card.classList.add('selected');
+                check.classList.remove('opacity-0');
+            }
+        }
+
+        function submitTreatment() {
+            const errors = [];
+            const correct = [];
+            
+            if(selectedDrugs.has('gtn')) { errors.push("GTN contraindicated in RV Infarct."); state.score -= 20; }
+            if(selectedDrugs.has('aspirin') && selectedDrugs.has('ticagrelor')) correct.push("DAPT Loaded.");
+            else { errors.push("Missed DAPT."); state.score -= 20; }
+            if(selectedDrugs.has('fluids')) correct.push("Fluids running (RV support).");
+            
+            let title = errors.length === 0 ? "Transfer Approved" : "Safety Warning";
+            let content = "";
+            if(correct.length > 0) content += `<div class='text-green-400 mb-2'>${correct.join('<br>')}</div>`;
+            if(errors.length > 0) content += `<div class='text-red-400'>${errors.join('<br>')}</div>`;
+            showFeedback(title, content, errors.length === 0);
+        }
+
+        // --- ACTION HANDLERS (Shared) ---
+        function handleAction(action) {
+            if(action === 'ecg_assess') showFeedback("Correct", "10 min target met.", true);
+            else { state.score -= 10; document.getElementById('scoreDisplay').innerText = state.score; showFeedback("Too Slow", "ECG first.", false); }
+        }
+        function handleDx(dx) {
+            if(dx === 'stemi_inf') { state.diagnosis = dx; nextScene(); }
+            else { state.score -= 15; document.getElementById('scoreDisplay').innerText = state.score; showFeedback("Wrong Diagnosis", "Look at II, III, aVF.", false); }
+        }
+
+        function showFeedback(title, text, isCorrect) {
+            const overlay = document.getElementById('feedbackOverlay');
+            document.getElementById('feedbackTitle').innerText = title;
+            document.getElementById('feedbackText').innerHTML = text;
+            document.getElementById('feedbackIcon').className = isCorrect ? "p-3 rounded-full bg-green-600/20 text-green-500 mt-1" : "p-3 rounded-full bg-red-600/20 text-red-500 mt-1";
+            document.getElementById('feedbackIcon').innerHTML = isCorrect ? '<i class="fa-solid fa-check"></i>' : '<i class="fa-solid fa-xmark"></i>';
+            overlay.classList.remove('hidden');
+        }
+
+        function nextScene() {
+            document.getElementById('feedbackOverlay').classList.add('hidden');
+            state.currentStep++;
+            renderScene();
+        }
+
+        function sceneSummary(container) {
+            container.innerHTML = `
+                <div class="max-w-2xl mx-auto text-center pt-8 animate-fade-in">
+                    <h2 class="text-4xl font-bold text-white mb-2">Scenario Complete</h2>
+                    <div class="text-6xl font-bold text-blue-500 mb-6 digital-font">${state.score}%</div>
+                    <div class="bg-slate-800 rounded-xl p-6 text-left space-y-4">
+                        <h3 class="text-white font-bold border-b border-slate-700 pb-2">Inferior MI Learning Points</h3>
+                        <ul class="space-y-3 text-slate-300 text-sm">
+                            <li><strong>1. RV Infarction:</strong> Suspect in all Inferior MIs. Request V4R leads.</li>
+                            <li><strong>2. Preload Dependent:</strong> RV needs fluid to pump. Avoid nitrates (GTN). Treat hypotension with fluid challenges.</li>
+                            <li><strong>3. Heart Block:</strong> RCA supplies AV node. Complete heart block is common. Treat with Atropine or Pacing.</li>
+                        </ul>
+                    </div>
+                    <button onclick="restartSim()" class="mt-8 text-slate-400 hover:text-white underline">Restart</button>
+                </div>
+            `;
+        }
+
+        function restartSim() {
+            state.currentStep = 0;
+            state.score = 100;
+            state.monitorRhythm = 'sinus';
+            currentMonitorInterval = 1.5;
+            selectedDrugs.clear();
+            document.getElementById('scoreDisplay').innerText = 100;
+            document.getElementById('hrVal').innerText = "88";
+            document.getElementById('hrVal').classList.remove('text-red-500', 'critical-alert');
+            document.getElementById('bpVal').innerText = "145/92";
+            document.getElementById('bpVal').classList.remove('text-red-500', 'critical-alert');
+            document.getElementById('monitorFrame').classList.remove('border-red-500');
+            renderScene();
+        }
+
+        requestAnimationFrame(animateMonitor);
+        renderScene();
+    </script>
+</body>
+</html>

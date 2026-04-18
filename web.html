@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PAIRWISE PRO WebR v1.0 | Meta-Analysis with R (metafor)</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <script src="https://webr.r-wasm.org/v0.3.2/webr.js"></script>
+    <style>
+        :root { --primary: #2563eb; --primary-dark: #1e40af; --bg-gray: #f8fafc; --border: #e2e8f0; --text: #1e293b; --surface: #ffffff; }
+        body { font-family: sans-serif; background: var(--bg-gray); color: var(--text); margin: 0; padding: 0; height: 100vh; display: flex; flex-direction: column; }
+        header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 0.75rem 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+        h1 { margin: 0; font-size: 1.25rem; font-weight: 700; color: var(--primary-dark); }
+        main { flex: 1; overflow-y: auto; padding: 1.5rem; }
+        .panel { background: var(--surface); border: 1px solid var(--border); border-radius: 8px; padding: 1.5rem; margin-bottom: 1rem; }
+        button.primary { background: var(--primary); color: white; border: none; padding: 0.5rem 1rem; border-radius: 4px; cursor: pointer; }
+        #loading { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 1000; font-size: 1.2rem; }
+        .data-table-container { overflow-x: auto; border: 1px solid var(--border); border-radius: 4px; }
+        table { width: 100%; border-collapse: collapse; font-size: 0.875rem; }
+        th, td { padding: 0.75rem; text-align: left; border-bottom: 1px solid var(--border); }
+    </style>
+</head>
+<body>
+    <header>
+        <h1>PAIRWISE PRO <span style="font-size:0.8em;">(WebR Powered)</span></h1>
+        <div class="controls">
+            <select id="measureSelect" class="text-sm">
+                <option value="OR">Odds Ratio (2x2)</option>
+                <option value="RR">Risk Ratio (2x2)</option>
+            </select>
+            <button class="primary" onclick="runWebRAnalysis()">▶ Run R Analysis</button>
+        </div>
+    </header>
+
+    <div id="loading">
+        Initializing WebR Engine...
+        <p style="font-size:0.8em; color:gray;">(This may take a moment on first load)</p>
+    </div>
+
+    <main>
+        <div class="panel">
+            <div class="panel-header"><span class="panel-title">Binary Data Entry</span></div>
+            <div class="data-table-container">
+                <table id="dataTable">
+                    <thead>
+                        <tr><th>Study Name</th><th>Events (T)</th><th>Total (T)</th><th>Events (C)</th><th>Total (C)</th><th></th></tr>
+                    </thead>
+                    <tbody id="tableBody">
+                        <!-- Initial rows -->
+                    </tbody>
+                </table>
+            </div>
+            <button onclick="addStudyRow()">+ Add Row</button>
+        </div>
+
+        <div class="panel">
+            <div class="panel-header"><span class="panel-title">WebR Results (Powered by metafor)</span></div>
+            <pre id="resultsOutput" style="white-space: pre-wrap; font-family: monospace;"></pre>
+            <div id="forestPlot" style="height: 400px;"></div>
+        </div>
+    </main>
+
+<script type="text/javascript">
+    const RE_MODEL = 'REML';
+    let webR;
+
+    // --- WebR Initialization ---
+    async function initWebR() {
+        webR = new WebR();
+        await webR.init();
+        await webR.installPackages(['metafor']);
+        document.getElementById('loading').style.display = 'none';
+        console.log("WebR and metafor initialized.");
+        addDefaultRows();
+    }
+    
+    // FIX: Robust check to ensure WebR is loaded before calling init
+    const checkWebR = setInterval(() => {
+        if (typeof WebR !== 'undefined') {
+            clearInterval(checkWebR);
+            initWebR();
+        }
+    }, 100); 
+
+    // --- Data Management ---
+    function addStudyRow(data = {}) {
+        const tbody = document.getElementById('tableBody');
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+            <td><input class="cell-input" data-col="name" value="${data.name || 'Study'}"></td>
+            <td><input type="number" class="cell-input" data-col="eT" value="${data.eT || ''}"></td>
+            <td><input type="number" class="cell-input" data-col="nT" value="${data.nT || ''}"></td>
+            <td><input type="number" class="cell-input" data-col="eC" value="${data.eC || ''}"></td>
+            <td><input type="number" class="cell-input" data-col="nC" value="${data.nC || ''}"></td>
+            <td><button onclick="this.closest('tr').remove()">×</button></td>
+        `;
+        tbody.appendChild(tr);
+    }
+
+    function addDefaultRows() {
+        // Sample data mimicking the SGLT2_HFH demo (Events/Total)
+        addStudyRow({name: 'DAPA-HF', eT: 386, nT: 2373, eC: 502, nC: 2371});
+        addStudyRow({name: 'EMPEROR-Red', eT: 389, nT: 1863, eC: 462, nC: 1867});
+        addStudyRow({name: 'DELIVER', eT: 512, nT: 3131, eC: 610, nC: 3132});
+    }
+
+    function readData() {
+        const rows = document.querySelectorAll('#tableBody tr');
+        const data = { names: [], eT: [], nT: [], eC: [], nC: [] };
+        
+        rows.forEach(tr => {
+            const inputs = tr.querySelectorAll('input');
+            data.names.push(inputs[0].value);
+            data.eT.push(parseFloat(inputs[1].value) || 0);
+            data.nT.push(parseFloat(inputs[2].value) || 0);
+            data.eC.push(parseFloat(inputs[3].value) || 0);
+            data.nC.push(parseFloat(inputs[4].value) || 0);
+        });
+        return data;
+    }
+
+    // --- WebR Analysis Logic ---
+    async function runWebRAnalysis() {
+        document.getElementById('resultsOutput').textContent = 'Running analysis...';
+        const data = readData();
+        const measure = document.getElementById('measureSelect').value;
+        const measure_code = (measure === 'OR' ? 'OR' : 'RR');
+        const measure_label = (measure === 'OR' ? 'Odds Ratio' : 'Risk Ratio');
+
+        if (data.names.length < 2) {
+            document.getElementById('resultsOutput').textContent = 'Error: Need at least two studies.';
+            return;
+        }
+
+        try {
+            await webR.evalR(`
+                library(metafor)
+                # Create R data frame
+                dat <- data.frame(
+                    study = c(${data.names.map(n => `"${n}"`).join(', ')}),
+                    e1 = c(${data.eT.join(', ')}),
+                    n1 = c(${data.nT.join(', ')}),
+                    e2 = c(${data.eC.join(', ')}),
+                    n2 = c(${data.nC.join(', ')})
+                )
+                
+                # Calculate effect sizes (yi) and variances (vi)
+                res_es <- escalc(measure="${measure_code}", ai=e1, n1i=n1, ci=e2, n2i=n2, data=dat, add=0.5, to="all")
+
+                # Run Random-Effects Meta-Analysis (REML)
+                res_rma <- rma(yi, vi, data=res_es, method="${RE_MODEL}", test="knha")
+            `);
+
+            // Extract main results and store to console
+            const resultSummary = await webR.evalR(`print(res_rma)`);
+            document.getElementById('resultsOutput').textContent = resultSummary.output[0].data;
+
+            // Extract data for plotting
+            const plotData = await webR.evalR(`
+                c(
+                    res_rma$b[1], # Pooled Effect
+                    res_rma$se,   # Pooled SE
+                    res_rma$tau2, # Tau2
+                    res_rma$QE,   # Q
+                    res_rma$I2,   # I2
+                    predict(res_rma)$pi.lb, # PI Lower
+                    predict(res_rma)$pi.ub  # PI Upper
+                )
+            `);
+            const poolStats = plotData.values;
+            const studyData = await webR.evalR('data.frame(study=res_es$study, yi=res_es$yi, vi=res_es$vi)');
+            const studyDF = await studyData.toJs();
+            
+            // Render Plot
+            renderWebRForestPlot(studyDF, poolStats, measure_label);
+
+        } catch (e) {
+            document.getElementById('resultsOutput').textContent = 'An error occurred during R execution: ' + e.toString();
+            console.error(e);
+        } finally {
+            // Clean up WebR memory
+            await webR.evalR('rm(res_rma, res_es, dat)');
+        }
+    }
+
+    // --- Plotting (Uses Plotly) ---
+    function renderWebRForestPlot(studyDF, poolStats, measureLabel) {
+        const [theta, se, tau2, Q, I2, pi_lo, pi_hi] = poolStats;
+        const isLog = measureLabel !== 'Risk Difference';
+        const k = studyDF.study.length;
+        
+        // Transform study data from log scale for plotting
+        const x_studies = studyDF.yi.map(y => isLog ? Math.exp(y) : y);
+        const y_studies = studyDF.study.map((s, i) => k - 1 - i); 
+        const x_lo = studyDF.yi.map(y => isLog ? Math.exp(y - 1.96 * Math.sqrt(studyDF.vi[i])) : y - 1.96 * Math.sqrt(studyDF.vi[i]));
+        const x_hi = studyDF.yi.map(y => isLog ? Math.exp(y + 1.96 * Math.sqrt(studyDF.vi[i])) : y + 1.96 * Math.sqrt(studyDF.vi[i]));
+        
+        const weights = studyDF.vi.map(v => 1 / (v + tau2));
+        const maxW = Math.max(...weights);
+
+        // Studies Trace
+        const traceStudies = {
+            x: x_studies, y: y_studies,
+            error_x: { 
+                type: 'data', 
+                array: x_hi.map((v,i)=>v-x_studies[i]), 
+                arrayminus: x_studies.map((v,i)=>v-x_lo[i]), 
+                visible: true, 
+                color: 'black' 
+            },
+            mode: 'markers', type: 'scatter', name: 'Studies', 
+            marker: { 
+                symbol: 'square', 
+                color: 'black', 
+                size: weights.map(w => 5 + (w/maxW)*15)
+            }
+        };
+
+        // Pooled Diamond (HKSJ CI used for display)
+        const pooledVal = isLog ? Math.exp(theta) : theta;
+        const poolLo = isLog ? Math.exp(theta - 1.96*se) : theta - 1.96*se;
+        const poolHi = isLog ? Math.exp(theta + 1.96*se) : theta + 1.96*se;
+        const y_diamond = -1; 
+        
+        const traceDiamond = {
+            x: [poolLo, pooledVal, poolHi, pooledVal],
+            y: [y_diamond, y_diamond+0.3, y_diamond, y_diamond-0.3],
+            fill: 'toself', fillcolor: 'red', line: {color:'red'}, name: 'Pooled'
+        };
+        
+        const nullVal = isLog ? 1 : 0;
+        
+        Plotly.newPlot('forestPlot', [traceStudies, traceDiamond], {
+            title: `Forest Plot (${measureLabel})`,
+            shapes: [{type: 'line', x0: nullVal, x1: nullVal, y0: -2, y1: k, line: {dash:'dot', width:1, color: 'gray'}}],
+            yaxis: { 
+                tickvals: [...y_studies, y_diamond], 
+                ticktext: [...studyDF.study, 'Pooled Effect'],
+                range: [-2, k]
+            },
+            xaxis: { title: measureLabel, type: isLog ? 'log' : 'linear' },
+            showlegend: false
+        });
+    }
+
+</script>
+</body>
+</html>
