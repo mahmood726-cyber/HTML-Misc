@@ -1030,22 +1030,22 @@ function renderConfigForm() {
         </fieldset>
         <fieldset><legend>Tolerance & Gates (§5.3, §9.4)</legend>
             <div class="form-grid">
-                <div class="form-group"><label>δ (MCID)</label><input type="number" step="any" id="cfg-delta" value="0.1054"></div>
-                <div class="form-group"><label>Min k for STABLE (§5.1)</label><input type="number" id="cfg-mink" value="4"></div>
-                <div class="form-group"><label>Working ρ (§4.2)</label><input type="number" step="0.1" id="cfg-rho" value="0.5" min="0" max="1"></div>
+                <div class="form-group"><label for="cfg-delta">δ (MCID)</label><input type="number" step="any" id="cfg-delta" value="0.1054"></div>
+                <div class="form-group"><label for="cfg-mink">Min k for STABLE (§5.1)</label><input type="number" id="cfg-mink" value="4"></div>
+                <div class="form-group"><label for="cfg-rho">Working ρ (§4.2)</label><input type="number" step="0.1" id="cfg-rho" value="0.5" min="0" max="1"></div>
             </div>
         </fieldset>
         <fieldset><legend>Bias Sensitivity (§7.3-7.5)</legend>
             <div class="form-grid">
-                <div class="form-group"><label>Min k Selection Model</label><input type="number" id="cfg-selmodel-mink" value="10"></div>
-                <div class="form-group"><label>Rare Event Threshold</label><input type="number" step="0.01" id="cfg-rare-threshold" value="0.05"></div>
+                <div class="form-group"><label for="cfg-selmodel-mink">Min k Selection Model</label><input type="number" id="cfg-selmodel-mink" value="10"></div>
+                <div class="form-group"><label for="cfg-rare-threshold">Rare Event Threshold</label><input type="number" step="0.01" id="cfg-rare-threshold" value="0.05"></div>
             </div>
         </fieldset>
         <fieldset><legend>Permutation & Bootstrap (§8.3)</legend>
             <div class="form-grid">
-                <div class="form-group"><label>Permutation Reps</label><input type="number" id="cfg-perm-reps" value="10000"></div>
-                <div class="form-group"><label>Bootstrap Reps</label><input type="number" id="cfg-boot-reps" value="1000"></div>
-                <div class="form-group"><label>Random Seed (§12)</label><input type="number" id="cfg-seed" value="12345"></div>
+                <div class="form-group"><label for="cfg-perm-reps">Permutation Reps</label><input type="number" id="cfg-perm-reps" value="10000"></div>
+                <div class="form-group"><label for="cfg-boot-reps">Bootstrap Reps</label><input type="number" id="cfg-boot-reps" value="1000"></div>
+                <div class="form-group"><label for="cfg-seed">Random Seed (§12)</label><input type="number" id="cfg-seed" value="12345"></div>
             </div>
         </fieldset>`;
 }
