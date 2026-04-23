@@ -237,7 +237,7 @@
                 <p class="text-xs font-mono text-zinc-500 uppercase">ClinicalTrials.gov V2 API • Import to Studio</p>
             </header>
             <div class="glass-panel p-4 rounded-xl flex gap-4">
-                <input type="text" id="scan-query" value="Sickle Cell" class="flex-1 bg-transparent border-b border-zinc-700 text-sm font-mono px-4 py-2 focus:border-accent-green" placeholder="Search condition...">
+                <input type="text" id="scan-query" value="Sickle Cell" class="flex-1 bg-transparent border-b border-zinc-700 text-sm font-mono px-4 py-2 focus:border-accent-green" aria-label="Search condition..." placeholder="Search condition...">
                 <button onclick="window.fetchTrials()" class="px-6 py-2 bg-zinc-800 text-white text-xs font-bold uppercase tracking-widest rounded hover:bg-zinc-700">Scan</button>
             </div>
             <div id="scan-results" class="grid md:grid-cols-2 gap-4 min-h-[200px]">

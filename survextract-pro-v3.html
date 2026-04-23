@@ -784,7 +784,7 @@
                     <div class="input-group">
                         <label class="input-label">Point 2: X-axis end</label>
                         <div class="input-row">
-                            <input type="number" class="input" id="calX2" placeholder="e.g., 60" step="any" onchange="updateCalibrationValues()">
+                            <input type="number" class="input" id="calX2" aria-label="e.g., 60" placeholder="e.g., 60" step="any" onchange="updateCalibrationValues()">
                             <input type="number" class="input" id="calY2" value="1" step="any" onchange="updateCalibrationValues()">
                         </div>
                     </div>
@@ -792,11 +792,11 @@
                         <label class="input-label">Point 3: Y-axis end</label>
                         <div class="input-row">
                             <input type="number" class="input" id="calX3" value="0" step="any" onchange="updateCalibrationValues()">
-                            <input type="number" class="input" id="calY3" placeholder="e.g., 0" step="any" onchange="updateCalibrationValues()">
+                            <input type="number" class="input" id="calY3" aria-label="e.g., 0" placeholder="e.g., 0" step="any" onchange="updateCalibrationValues()">
                         </div>
                     </div>
                     <div class="input-group">
-                        <label class="input-label">Default N (if no at-risk table)</label>
+                        <label class="input-label" for="defaultN">Default N (if no at-risk table)</label>
                         <input type="number" class="input" id="defaultN" value="100" step="1" min="10">
                     </div>
                     <div class="cal-status incomplete" id="calStatus">Click 3 points to calibrate axes</div>
@@ -855,16 +855,16 @@
                 <div class="section-header" onclick="toggleSection(this)"><span>⚙️ Display Options</span><span>▼</span></div>
                 <div class="section-content">
                     <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 11px;">
-                        <input type="checkbox" id="showGrid" checked onchange="render()"> Show calibration grid
+                        <input type="checkbox" id="showGrid" checked onchange="render()" aria-label="Show calibration grid"> Show calibration grid
                     </label>
                     <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 11px;">
-                        <input type="checkbox" id="stepFunction" checked onchange="render()"> Draw as step function
+                        <input type="checkbox" id="stepFunction" checked onchange="render()" aria-label="Draw as step function"> Draw as step function
                     </label>
                     <label style="display: flex; align-items: center; gap: 8px; margin-bottom: 10px; cursor: pointer; font-size: 11px;">
-                        <input type="checkbox" id="showReconOverlay" onchange="render()"> Show reconstructed overlay
+                        <input type="checkbox" id="showReconOverlay" onchange="render()" aria-label="Show reconstructed overlay"> Show reconstructed overlay
                     </label>
                     <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px;">
-                        <input type="checkbox" id="showBootstrapCI" onchange="render()"> Show bootstrap CI bands
+                        <input type="checkbox" id="showBootstrapCI" onchange="render()" aria-label="Show bootstrap CI bands"> Show bootstrap CI bands
                     </label>
                 </div>
             </div>
@@ -1002,8 +1002,8 @@
                     <div class="card card-cyan">
                         <div class="card-title" style="color: var(--accent-cyan);">📏 RMST Analysis</div>
                         <div class="input-group">
-                            <label class="input-label">Restriction Time (τ)</label>
-                            <input type="number" class="input" id="rmstTau" placeholder="e.g., 60" step="any">
+                            <label class="input-label" for="rmstTau">Restriction Time (τ)</label>
+                            <input type="number" class="input" id="rmstTau" aria-label="e.g., 60" placeholder="e.g., 60" step="any">
                         </div>
                         <button class="btn btn-sm" style="width: 100%; margin-bottom: 12px;" onclick="calculateRMST()">Calculate RMST</button>
                         <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px;">
@@ -1069,7 +1069,7 @@
                             Lower RMSE indicates better reconstruction fidelity.
                         </div>
                         <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 11px; margin-bottom: 10px;">
-                            <input type="checkbox" id="showReconCurve" onchange="render()"> Show reconstructed curve overlay
+                            <input type="checkbox" id="showReconCurve" onchange="render()" aria-label="Show reconstructed curve overlay"> Show reconstructed curve overlay
                         </label>
                         <button class="btn btn-sm" style="width: 100%;" onclick="runGuyotValidation()">Run Validation</button>
                     </div>
@@ -1088,7 +1088,7 @@
                     <div class="card card-cyan">
                         <div class="card-title" style="color: var(--accent-cyan);">🎲 Bootstrap Confidence Intervals</div>
                         <div class="input-group">
-                            <label class="input-label">Bootstrap Iterations</label>
+                            <label class="input-label" for="bootstrapN">Bootstrap Iterations</label>
                             <input type="number" class="input" id="bootstrapN" value="1000" step="100" min="100" max="10000">
                         </div>
                         <button class="btn btn-sm" style="width: 100%; margin-bottom: 12px;" onclick="runBootstrapCI()">Generate Bootstrap CI</button>
@@ -2716,8 +2716,8 @@
             const container = document.getElementById('atRiskSection');
             container.innerHTML = state.arms.map((arm, i) => `
                 <div class="input-group">
-                    <label class="input-label">${arm.name} (time, n per line)</label>
-                    <textarea class="input" id="atRisk${i}" rows="3" placeholder="0, 100&#10;12, 80&#10;24, 60"></textarea>
+                    <label class="input-label" for="atRisk${i}">${arm.name} (time, n per line)</label>
+                    <textarea class="input" id="atRisk${i}" rows="3" aria-label="0, 100&#10;12, 80&#10;24, 60" placeholder="0, 100&#10;12, 80&#10;24, 60"></textarea>
                 </div>
             `).join('');
         }

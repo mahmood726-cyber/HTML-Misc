@@ -1020,10 +1020,10 @@ function renderConfigForm() {
     document.getElementById('config-form').innerHTML = `
         <fieldset><legend>Effect Measure (§1.3)</legend>
             <div class="form-grid">
-                <div class="form-group"><label>Measure</label>
+                <div class="form-group"><label for="cfg-measure">Measure</label>
                     <select id="cfg-measure"><option value="logHR">log(HR)</option><option value="logRR">log(RR)</option><option value="logOR">log(OR)</option><option value="MD">MD</option><option value="SMD">SMD</option></select>
                 </div>
-                <div class="form-group"><label>Exponentiate Output</label>
+                <div class="form-group"><label for="cfg-exp">Exponentiate Output</label>
                     <select id="cfg-exp"><option value="true">Yes</option><option value="false">No</option></select>
                 </div>
             </div>

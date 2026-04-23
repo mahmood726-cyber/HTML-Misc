@@ -360,7 +360,7 @@ fieldset{border:1px solid var(--border);border-radius:var(--radius-sm);padding:2
                     <legend style="color:var(--green);">🌍 Country Pack</legend>
                     <div class="form-grid">
                         <div class="form-group">
-                            <label>Country</label>
+                            <label for="hta-country">Country</label>
                             <select id="hta-country" onchange="onCountryChange()">
                                 <optgroup label="── Reference Countries ──">
                                     <option value="GBR">United Kingdom (GBP)</option>
@@ -438,7 +438,7 @@ fieldset{border:1px solid var(--border);border-radius:var(--radius-sm);padding:2
                             </select>
                         </div>
                         <div class="form-group">
-                            <label>Disease Pack</label>
+                            <label for="hta-disease-pack">Disease Pack</label>
                             <select id="hta-disease-pack" onchange="onDiseasePackChange()">
                                 <option value="none">-- Select Disease --</option>
                                 <option value="malaria">🦟 Malaria</option>
@@ -464,8 +464,8 @@ fieldset{border:1px solid var(--border);border-radius:var(--radius-sm);padding:2
                 <fieldset style="margin-bottom:16px;">
                     <legend style="color:var(--cyan);">💊 Intervention Pack</legend>
                     <div class="form-grid">
-                        <div class="form-group"><label>Intervention Name</label><input type="text" id="hta-interv-name" placeholder="e.g., SGLT2 inhibitor" class="cell-input"></div>
-                        <div class="form-group"><label>Comparator Name</label><input type="text" id="hta-comp-name" placeholder="e.g., Standard care" class="cell-input" value="Standard care"></div>
+                        <div class="form-group"><label>Intervention Name</label><input type="text" id="hta-interv-name" aria-label="e.g., SGLT2 inhibitor" placeholder="e.g., SGLT2 inhibitor" class="cell-input"></div>
+                        <div class="form-group"><label>Comparator Name</label><input type="text" id="hta-comp-name" aria-label="e.g., Standard care" placeholder="e.g., Standard care" class="cell-input" value="Standard care"></div>
                         <div class="form-group"><label>Intervention Cost (LCU/year)</label><input type="number" id="hta-cost-interv" value="1200" class="cell-input"></div>
                         <div class="form-group"><label>Comparator Cost (LCU/year)</label><input type="number" id="hta-cost-comp" value="0" class="cell-input"></div>
                         <div class="form-group"><label>Time Horizon (years)</label><input type="number" id="hta-horizon" value="10" min="1" max="100" class="cell-input"></div>
@@ -478,7 +478,7 @@ fieldset{border:1px solid var(--border);border-radius:var(--radius-sm);padding:2
                         <div class="form-group"><label>Baseline Event Risk (annual)</label><input type="number" id="hta-baseline-risk" value="0.05" step="0.01" min="0" max="1" class="cell-input"></div>
                         <div class="form-group"><label>QALY Loss per Event</label><input type="number" id="hta-qaly-loss" value="0.15" step="0.01" class="cell-input"></div>
                         <div class="form-group"><label>Cost per Event (LCU)</label><input type="number" id="hta-cost-event" value="15000" class="cell-input"></div>
-                        <div class="form-group"><label>Outcome Measure</label>
+                        <div class="form-group"><label for="hta-outcome-type">Outcome Measure</label>
                             <select id="hta-outcome-type">
                                 <option value="events_prevented">Events Prevented</option>
                                 <option value="qaly">QALYs Gained</option>
@@ -1612,10 +1612,10 @@ function renderConfigForm() {
     document.getElementById('config-form').innerHTML = `
         <fieldset><legend>Effect Measure (§1.3)</legend>
             <div class="form-grid">
-                <div class="form-group"><label>Measure</label>
+                <div class="form-group"><label for="cfg-measure">Measure</label>
                     <select id="cfg-measure"><option value="logHR">log(HR)</option><option value="logRR">log(RR)</option><option value="logOR">log(OR)</option><option value="MD">MD</option><option value="SMD">SMD</option></select>
                 </div>
-                <div class="form-group"><label>Exponentiate Output</label>
+                <div class="form-group"><label for="cfg-exp">Exponentiate Output</label>
                     <select id="cfg-exp"><option value="true">Yes</option><option value="false">No</option></select>
                 </div>
             </div>

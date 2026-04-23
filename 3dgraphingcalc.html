@@ -302,7 +302,7 @@
         <div class="magic-box">
             <label class="magic-label">✨ Shape Generator</label>
             <div class="magic-input-group">
-                <input type="text" id="magic-input" placeholder="e.g. 'heart', 'cuboid', 'volcano'">
+                <input type="text" id="magic-input" aria-label="e.g. 'heart', 'cuboid', 'volcano'" placeholder="e.g. 'heart', 'cuboid', 'volcano'">
                 <button id="magic-btn">Go</button>
             </div>
             <div class="help-text">Try: heart, cuboid, volcano, city, star</div>
@@ -316,11 +316,11 @@
 
         <div class="row">
             <div class="control-group">
-                <label>Min</label>
+                <label for="range-min">Min</label>
                 <input type="number" id="range-min" value="-10">
             </div>
             <div class="control-group">
-                <label>Max</label>
+                <label for="range-max">Max</label>
                 <input type="number" id="range-max" value="10">
             </div>
         </div>
@@ -335,11 +335,11 @@
         
         <div class="row">
             <div class="control-group">
-                <label>Low Color</label>
+                <label for="color-low">Low Color</label>
                 <input type="color" id="color-low" value="#0000ff">
             </div>
             <div class="control-group">
-                <label>High Color</label>
+                <label for="color-high">High Color</label>
                 <input type="color" id="color-high" value="#ff0000">
             </div>
         </div>
