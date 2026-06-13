@@ -192,8 +192,8 @@
         // Transform study data from log scale for plotting
         const x_studies = studyDF.yi.map(y => isLog ? Math.exp(y) : y);
         const y_studies = studyDF.study.map((s, i) => k - 1 - i); 
-        const x_lo = studyDF.yi.map(y => isLog ? Math.exp(y - 1.96 * Math.sqrt(studyDF.vi[i])) : y - 1.96 * Math.sqrt(studyDF.vi[i]));
-        const x_hi = studyDF.yi.map(y => isLog ? Math.exp(y + 1.96 * Math.sqrt(studyDF.vi[i])) : y + 1.96 * Math.sqrt(studyDF.vi[i]));
+        const x_lo = studyDF.yi.map((y, i) => isLog ? Math.exp(y - 1.96 * Math.sqrt(studyDF.vi[i])) : y - 1.96 * Math.sqrt(studyDF.vi[i]));
+        const x_hi = studyDF.yi.map((y, i) => isLog ? Math.exp(y + 1.96 * Math.sqrt(studyDF.vi[i])) : y + 1.96 * Math.sqrt(studyDF.vi[i]));
         
         const weights = studyDF.vi.map(v => 1 / (v + tau2));
         const maxW = Math.max(...weights);
